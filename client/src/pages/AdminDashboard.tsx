@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import api from '../services/api'; // axios instance with baseURL
+import { Link } from 'react-router-dom'; // For navigation to category page
+import api from '../services/api'; // Axios instance with baseURL
 import { toast } from 'react-toastify';
 
 interface Vendor {
@@ -48,7 +49,16 @@ export default function AdminDashboard() {
 
   return (
     <div className="p-6 max-w-6xl mx-auto">
-      <h1 className="text-3xl font-bold mb-6">Admin Dashboard</h1>
+      {/* Header with Manage Categories */}
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-3xl font-bold">Admin Dashboard</h1>
+        <Link
+          to="/admin/categories"
+          className="bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700"
+        >
+          Manage Categories
+        </Link>
+      </div>
 
       {/* Tabs */}
       <div className="flex space-x-4 mb-6">

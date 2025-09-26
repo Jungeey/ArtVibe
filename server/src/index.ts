@@ -1,9 +1,12 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import path from 'path';
 import connectDB from './config/database';
 import authRoutes from './routes/authRoutes';
 import adminRoutes from './routes/adminRoutes';
+import categoryRoutes from './routes/categoryRoutes';
+import productRoutes from './routes/productRoutes';
 
 // Load environment variables
 dotenv.config();
@@ -15,8 +18,14 @@ const PORT = process.env.PORT || 5000;
 app.use(cors());
 app.use(express.json());
 
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+
+
 app.use('/api/auth', authRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/categories', categoryRoutes);
+
+app.use('/api/products', productRoutes);
 
 // Connect to database
 connectDB();

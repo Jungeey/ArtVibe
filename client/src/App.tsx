@@ -8,9 +8,15 @@ import Navbar from "./components/Navbar";
 import Register from "./pages/Register";
 import Login from "./pages/Login";
 import UserDashboard from "./pages/UserDashboard";
+import AdminCategoryPage from "./components/AdminCategoryPage";
 import VendorDashboard from "./pages/VendorDashboard";
 import AdminDashboard from "./pages/AdminDashboard";
 import { isLoggedIn, getUserRole } from "./utils/auth";
+import HomePage from "./pages/HomePage";
+
+// Optional future vendor pages (import later if needed)
+// import VendorProductEdit from "./pages/VendorProductEdit";
+// import VendorOrderPage from "./pages/VendorOrders";
 
 type ProtectedRouteProps = {
   children: React.ReactNode;
@@ -38,23 +44,59 @@ function App() {
         <Navbar />
         <div className="p-6">
           <Routes>
-            <Route path="/" element={
-                <h1 className="text-3xl font-bold">Welcome to Art Vibe</h1>
-              }
-            />
+            {/* Home */}
+          <Route path="/" element={<HomePage />} />
 
+
+            {/* Auth */}
             <Route path="/register" element={<Register />} />
             <Route path="/login" element={<Login />} />
 
-            {/* User Dashboard - accessible to all logged-in users */}
+            {/* User */}
             <Route path="/user-dashboard" element={<UserDashboard />} />
 
-            {/* Vendor Dashboard - only for vendors */}
-            <Route path="/vendor-dashboard" element={ <ProtectedRoute requiredRole="vendor"> <VendorDashboard /> </ProtectedRoute> } />
+            {/* Vendor */}
+            <Route
+              path="/vendor-dashboard"
+              element={
+                <ProtectedRoute requiredRole="vendor">
+                  <VendorDashboard />
+                </ProtectedRoute>
+              }
+            />
 
-            {/* Admin Dashboard - only for admins */}
-            <Route path="/admin-dashboard" element={ <ProtectedRoute requiredRole="admin"> <AdminDashboard /> </ProtectedRoute> } />
-            
+            {/* Vendor future routes (for expansion) */}
+            {/*
+            <Route
+              path="/vendor/products/edit/:id"
+              element={
+                <ProtectedRoute requiredRole="vendor">
+                  <VendorProductEdit />
+                </ProtectedRoute>
+              }
+            />
+            */}
+
+            {/* Admin */}
+            <Route
+              path="/admin-dashboard"
+              element={
+                <ProtectedRoute requiredRole="admin">
+                  <AdminDashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/categories"
+              element={
+                <ProtectedRoute requiredRole="admin">
+                  <AdminCategoryPage />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Catch-all */}
+            <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </div>
       </div>
