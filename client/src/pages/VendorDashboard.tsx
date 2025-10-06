@@ -4,7 +4,7 @@ import EditProductForm from '../components/EditProductForm';
 import { getCategories } from '../services/categoryService';
 import { createProduct, getVendorProducts, deleteProduct, updateProduct } from '../services/productService';
 import { getUser, isVendorVerified } from '../utils/auth';
-import { ImgaePath } from '../services/api';
+
 interface Category {
   _id: string;
   name: string;
@@ -18,6 +18,8 @@ interface Product {
   stockQuantity: number;
   status: 'active' | 'unlisted';
   images: string[];
+  thumbnails?: string[]; // MAKE OPTIONAL
+  primaryImage?: string; // MAKE OPTIONAL
   category: Category;
 }
 
@@ -38,17 +40,17 @@ const VendorDashboard: React.FC = () => {
       const user = getUser();
       console.log('Current user from localStorage:', user);
       console.log('Is vendor verified:', isVendorVerified());
-      
+
       if (!user) {
         setError('Please log in to access vendor dashboard');
         return;
       }
-      
+
       if (user.role !== 'vendor') {
         setError('Access denied. Vendor account required.');
         return;
       }
-      
+
       if (!isVendorVerified()) {
         setError('Please complete vendor verification before creating products.');
         return;
@@ -91,7 +93,7 @@ const VendorDashboard: React.FC = () => {
       console.error('Failed to fetch products:', err);
       const errorMessage = err.response?.data?.message || 'Failed to load products';
       setError(errorMessage);
-      
+
       if (err.response?.status === 403) {
         setError('Access denied. Please ensure you are logged in as a verified vendor.');
       }
@@ -114,11 +116,11 @@ const VendorDashboard: React.FC = () => {
       console.log('Product creation response:', res.data);
       setSuccess('Product created successfully');
       fetchProducts(); // Refresh product list
-      
+
       // Reset form
       const form = document.querySelector('form');
       if (form) form.reset();
-      
+
       // Clear success message after 3 seconds
       setTimeout(() => setSuccess(''), 3000);
     } catch (err: any) {
@@ -133,7 +135,7 @@ const VendorDashboard: React.FC = () => {
   // Handle editing product
   const handleEditProduct = async (formData: FormData) => {
     if (!editingProduct) return;
-    
+
     setCreatingProduct(true);
     setError('');
     try {
@@ -143,7 +145,7 @@ const VendorDashboard: React.FC = () => {
       setSuccess('Product updated successfully');
       setEditingProduct(null);
       fetchProducts(); // Refresh product list
-      
+
       // Clear success message after 3 seconds
       setTimeout(() => setSuccess(''), 3000);
     } catch (err: any) {
@@ -168,7 +170,7 @@ const VendorDashboard: React.FC = () => {
       await deleteProduct(productId);
       setSuccess('Product deleted successfully');
       fetchProducts(); // Refresh product list
-      
+
       // Clear success message after 3 seconds
       setTimeout(() => setSuccess(''), 3000);
     } catch (err: any) {
@@ -183,17 +185,17 @@ const VendorDashboard: React.FC = () => {
   // Handle status toggle
   const handleToggleStatus = async (product: Product) => {
     const newStatus = product.status === 'active' ? 'unlisted' : 'active';
-    
+
     setError('');
     try {
       const formData = new FormData();
       formData.append('status', newStatus);
-      
+
       console.log('Toggling product status:', product._id, newStatus);
       await updateProduct(product._id, formData);
       setSuccess(`Product ${newStatus === 'active' ? 'activated' : 'unlisted'} successfully`);
       fetchProducts(); // Refresh product list
-      
+
       // Clear success message after 3 seconds
       setTimeout(() => setSuccess(''), 3000);
     } catch (err: any) {
@@ -209,7 +211,7 @@ const VendorDashboard: React.FC = () => {
         <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
           <h2 className="font-bold">Access Issue</h2>
           <p>{error}</p>
-          <button 
+          <button
             onClick={() => window.location.href = '/profile'}
             className="mt-2 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
           >
@@ -268,7 +270,7 @@ const VendorDashboard: React.FC = () => {
         <div className="bg-white p-6 rounded shadow">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-xl font-semibold">Edit Product</h2>
-            <button 
+            <button
               onClick={() => setEditingProduct(null)}
               className="bg-gray-600 text-white px-4 py-2 rounded hover:bg-gray-700"
             >
@@ -289,14 +291,14 @@ const VendorDashboard: React.FC = () => {
       <div className="bg-white p-6 rounded shadow">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-semibold">My Products ({products.length})</h2>
-          <button 
+          <button
             onClick={fetchProducts}
             className="bg-gray-600 text-white px-4 py-2 rounded hover:bg-gray-700"
           >
             Refresh
           </button>
         </div>
-        
+
         {loadingProducts ? (
           <p>Loading products...</p>
         ) : products.length === 0 ? (
@@ -320,8 +322,8 @@ const VendorDashboard: React.FC = () => {
                   <tr key={product._id} className="hover:bg-gray-50">
                     <td className="border px-4 py-2">
                       {product.images && product.images.length > 0 ? (
-                        <img 
-                          src={`${ImgaePath}${product.images[0]}`}
+                        <img
+                          src={product.thumbnails?.[0] || product.images[0]}
                           alt={product.name}
                           className="w-12 h-12 object-cover rounded"
                         />
@@ -336,11 +338,10 @@ const VendorDashboard: React.FC = () => {
                     <td className="border px-4 py-2">${product.price.toFixed(2)}</td>
                     <td className="border px-4 py-2">{product.stockQuantity}</td>
                     <td className="border px-4 py-2">
-                      <span className={`px-2 py-1 rounded text-xs ${
-                        product.status === 'active' 
-                          ? 'bg-green-100 text-green-800' 
-                          : 'bg-gray-100 text-gray-800'
-                      }`}>
+                      <span className={`px-2 py-1 rounded text-xs ${product.status === 'active'
+                        ? 'bg-green-100 text-green-800'
+                        : 'bg-gray-100 text-gray-800'
+                        }`}>
                         {product.status}
                       </span>
                     </td>
@@ -355,11 +356,10 @@ const VendorDashboard: React.FC = () => {
                         </button>
                         <button
                           onClick={() => handleToggleStatus(product)}
-                          className={`px-3 py-1 rounded text-sm ${
-                            product.status === 'active'
-                              ? 'bg-yellow-600 text-white hover:bg-yellow-700'
-                              : 'bg-green-600 text-white hover:bg-green-700'
-                          }`}
+                          className={`px-3 py-1 rounded text-sm ${product.status === 'active'
+                            ? 'bg-yellow-600 text-white hover:bg-yellow-700'
+                            : 'bg-green-600 text-white hover:bg-green-700'
+                            }`}
                           title={product.status === 'active' ? 'Unlist Product' : 'Activate Product'}
                         >
                           {product.status === 'active' ? 'Unlist' : 'Activate'}

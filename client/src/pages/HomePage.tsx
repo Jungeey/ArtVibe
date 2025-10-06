@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom'; // ADD IMPORT
 import { getAllProducts } from '../services/productService';
 import { getCategories } from '../services/categoryService';
-import { ImgaePath } from '../services/api';
 
 interface Category {
   _id: string;
@@ -23,6 +23,8 @@ interface Product {
   stockQuantity: number;
   status: 'active' | 'unlisted';
   images: string[];
+  thumbnails?: string[];
+  primaryImage?: string;
   category: Category;
   vendor: Vendor;
   createdAt: string;
@@ -36,6 +38,8 @@ const HomePage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
   const [sortBy, setSortBy] = useState<'name' | 'price' | 'newest'>('newest');
+  
+  const navigate = useNavigate(); // ADD NAVIGATE HOOK
 
   // Fetch all products and categories
   useEffect(() => {
@@ -44,14 +48,12 @@ const HomePage: React.FC = () => {
         setLoading(true);
         setError('');
 
-        // Fetch products
         const productsResponse = await getAllProducts();
-        const activeProducts = productsResponse.data.products?.filter((product: Product) => 
+        const activeProducts = productsResponse.data.products?.filter((product: Product) =>
           product.status === 'active'
         ) || [];
         setProducts(activeProducts);
 
-        // Fetch categories
         const categoriesResponse = await getCategories();
         setCategories(categoriesResponse.data);
 
@@ -66,15 +68,26 @@ const HomePage: React.FC = () => {
     fetchData();
   }, []);
 
+  // ADD FUNCTION TO HANDLE PRODUCT CLICK
+  const handleProductClick = (productId: string) => {
+    navigate(`/product/${productId}`);
+  };
+
+  // ADD FUNCTION TO HANDLE PURCHASE BUTTON CLICK
+  const handlePurchaseClick = (productId: string, e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent triggering the product card click
+    navigate(`/purchase/${productId}`);
+  };
+
   // Filter and sort products
   const filteredAndSortedProducts = products
     .filter(product => {
       const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           product.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           product.vendor.businessName?.toLowerCase().includes(searchTerm.toLowerCase());
-      
+        product.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        product.vendor.businessName?.toLowerCase().includes(searchTerm.toLowerCase());
+
       const matchesCategory = !selectedCategory || product.category._id === selectedCategory;
-      
+
       return matchesSearch && matchesCategory;
     })
     .sort((a, b) => {
@@ -90,7 +103,6 @@ const HomePage: React.FC = () => {
       }
     });
 
-  // Format price
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
@@ -98,7 +110,6 @@ const HomePage: React.FC = () => {
     }).format(price);
   };
 
-  // Format date
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
       year: 'numeric',
@@ -208,8 +219,8 @@ const HomePage: React.FC = () => {
             <div className="text-gray-400 text-6xl mb-4">🔍</div>
             <h3 className="text-xl font-semibold text-gray-900 mb-2">No products found</h3>
             <p className="text-gray-600">
-              {searchTerm || selectedCategory 
-                ? 'Try adjusting your search or filters to find more products.' 
+              {searchTerm || selectedCategory
+                ? 'Try adjusting your search or filters to find more products.'
                 : 'No products available at the moment. Please check back later.'
               }
             </p>
@@ -217,12 +228,16 @@ const HomePage: React.FC = () => {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {filteredAndSortedProducts.map((product) => (
-              <div key={product._id} className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-300">
+              <div 
+                key={product._id} 
+                className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-300 cursor-pointer" // ADD cursor-pointer
+                onClick={() => handleProductClick(product._id)} // ADD ONCLICK HANDLER
+              >
                 {/* Product Image */}
                 <div className="relative h-48 bg-gray-200">
                   {product.images && product.images.length > 0 ? (
                     <img
-                      src={`${ImgaePath}${product.images[0]}`}
+                      src={product.thumbnails?.[0] || product.images[0]}
                       alt={product.name}
                       className="w-full h-full object-cover"
                     />
@@ -231,14 +246,14 @@ const HomePage: React.FC = () => {
                       <span className="text-gray-400 text-sm">No Image</span>
                     </div>
                   )}
-                  
+
                   {/* Stock Status Badge */}
                   {product.stockQuantity === 0 && (
                     <span className="absolute top-2 right-2 bg-red-500 text-white px-2 py-1 rounded-full text-xs font-medium">
                       Out of Stock
                     </span>
                   )}
-                  
+
                   {/* New Badge */}
                   {new Date(product.createdAt) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) && (
                     <span className="absolute top-2 left-2 bg-green-500 text-white px-2 py-1 rounded-full text-xs font-medium">
@@ -283,10 +298,9 @@ const HomePage: React.FC = () => {
                     <span className="text-2xl font-bold text-gray-900">
                       {formatPrice(product.price)}
                     </span>
-                    <span className={`text-sm ${
-                      product.stockQuantity > 10 ? 'text-green-600' : 
+                    <span className={`text-sm ${product.stockQuantity > 10 ? 'text-green-600' :
                       product.stockQuantity > 0 ? 'text-yellow-600' : 'text-red-600'
-                    }`}>
+                      }`}>
                       {product.stockQuantity > 0 ? `${product.stockQuantity} in stock` : 'Out of stock'}
                     </span>
                   </div>
@@ -296,12 +310,14 @@ const HomePage: React.FC = () => {
                     <button
                       className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors disabled:bg-blue-300 disabled:cursor-not-allowed"
                       disabled={product.stockQuantity === 0}
+                      onClick={(e) => handlePurchaseClick(product._id, e)} // UPDATE ONCLICK HANDLER
                     >
-                      {product.stockQuantity === 0 ? 'Out of Stock' : 'Add to Cart'}
+                      {product.stockQuantity === 0 ? 'Out of Stock' : 'Buy Now'}
                     </button>
                     <button
                       className="p-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
                       title="Add to Wishlist"
+                      onClick={(e) => e.stopPropagation()} // PREVENT CARD CLICK
                     >
                       ♡
                     </button>
@@ -317,7 +333,7 @@ const HomePage: React.FC = () => {
           </div>
         )}
 
-        {/* Load More (if needed in future) */}
+        {/* Load More */}
         {filteredAndSortedProducts.length > 0 && (
           <div className="text-center mt-8">
             <button className="bg-white border border-gray-300 text-gray-700 px-6 py-2 rounded-lg hover:bg-gray-50 transition-colors">

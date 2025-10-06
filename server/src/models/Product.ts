@@ -4,13 +4,16 @@ import { ICategory } from './Category';
 
 export interface IProduct extends Document {
   sku: string;
-  slug: string; // ADD THIS
+  slug: string;
   name: string;
   description: string;
   price: number;
   stockQuantity: number;
   status: 'active' | 'unlisted';
-  images: string[];
+  // Enhanced media fields
+  images: string[];          // Original images (backward compatible)
+  thumbnails: string[];      // Thumbnail versions
+  primaryImage: string;      // Main display image
   category: ICategory['_id'];
   vendor: IUser['_id'];
   createdAt: Date;
@@ -25,7 +28,7 @@ const productSchema: Schema = new Schema(
       sparse: true,
       trim: true
     },
-    slug: { // ADD THIS FIELD
+    slug: {
       type: String,
       unique: true,
       sparse: true,
@@ -37,20 +40,25 @@ const productSchema: Schema = new Schema(
     price: { type: Number, required: true },
     stockQuantity: { type: Number, default: 0 },
     status: { type: String, enum: ['active', 'unlisted'], default: 'active' },
-    images: [{ type: String }],
+    
+    // Simple media enhancement
+    images: [{ type: String }],      // Original image URLs
+    thumbnails: [{ type: String }],  // Thumbnail URLs (same order as images)
+    primaryImage: { type: String },  // Main image URL
+    
     category: { type: mongoose.Schema.Types.ObjectId, ref: 'Category', required: true },
     vendor: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   },
   { timestamps: true }
 );
 
-// ADD SLUG GENERATION (from name)
+// Auto-generate SKU and slug
 productSchema.pre('save', async function(next) {
   if (this.isNew) {
-    // Generate SKU if not provided
+    // Generate SKU
     if (!this.sku) {
       const generateSKU = () => {
-        const prefix = 'ART';
+        const prefix = "ART";
         const randomNum = Math.floor(1000 + Math.random() * 9000);
         const timestamp = Date.now().toString().slice(-4);
         return `${prefix}${randomNum}${timestamp}`;
@@ -58,7 +66,7 @@ productSchema.pre('save', async function(next) {
       this.sku = generateSKU();
     }
     
-    // Generate slug from name
+    // Generate slug
     if (!this.slug && this.name) {
       const baseSlug = this.name
         .toLowerCase()
@@ -66,9 +74,13 @@ productSchema.pre('save', async function(next) {
         .replace(/-+/g, '-')
         .replace(/^-|-$/g, '');
       
-      // Add random string to ensure uniqueness
-      const randomSuffix = Math.random().toString(36).substring(2, 8);
+      const randomSuffix = Math.random().toString(36).substring(2, 6);
       this.slug = `${baseSlug}-${randomSuffix}`;
+    }
+    
+    // Set primary image as first image
+    if (this.images && this.images.length > 0 && !this.primaryImage) {
+      this.primaryImage = this.images[0];
     }
   }
   next();

@@ -13,6 +13,10 @@ import VendorDashboard from "./pages/VendorDashboard";
 import AdminDashboard from "./pages/AdminDashboard";
 import { isLoggedIn, getUserRole } from "./utils/auth";
 import HomePage from "./pages/HomePage";
+import PurchasePage from "./pages/PurchasePage";
+import ProductDetailPage from "./components/ProductDetailPage";
+import OrderSuccessPage from "./pages/OrderSuccessPage";
+import PaymentSuccess from "./pages/PaymentSuccess";
 
 // Optional future vendor pages (import later if needed)
 // import VendorProductEdit from "./pages/VendorProductEdit";
@@ -46,6 +50,10 @@ function App() {
           <Routes>
             {/* Home */}
           <Route path="/" element={<HomePage />} />
+
+            <Route path="/product/:id" element={<ProductDetailPage />} />
+            <Route path="/purchase/:id" element={<PurchasePage />} />
+            <Route path="/order-success" element={<OrderSuccessPage />} />
 
 
             {/* Auth */}
@@ -94,6 +102,10 @@ function App() {
                 </ProtectedRoute>
               }
             />
+
+
+            <Route path="/payment/success" element={<PaymentSuccess />} />
+
 
             {/* Catch-all */}
             <Route path="*" element={<Navigate to="/" replace />} />

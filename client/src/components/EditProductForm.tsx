@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { ImgaePath } from '../services/api';
 
 interface Product {
   _id: string;
@@ -187,7 +186,7 @@ const EditProductForm: React.FC<Props> = ({
             {existingImages.map((imageUrl, index) => (
               <div key={index} className="relative">
                 <img 
-                  src={`${ImgaePath}${product.images[0]}`}
+                  src={product.images[0]} 
                   alt={`Product ${index + 1}`}
                   className="w-20 h-20 object-cover rounded border"
                 />
