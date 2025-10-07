@@ -8,7 +8,8 @@ import adminRoutes from './routes/adminRoutes';
 import categoryRoutes from './routes/categoryRoutes';
 import productRoutes from './routes/productRoutes';
 import paymentRoutes from './routes/paymentRoutes';
-import orderRoutes from './routes/orderRoutes'; // Add this import
+import orderRoutes from './routes/orderRoutes'; 
+import cartRoutes from './routes/cartRoutes'; // Import cart routes
 
 // Load environment variables
 dotenv.config();
@@ -29,7 +30,9 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/payments', paymentRoutes);
-app.use('/api', orderRoutes); // Add this line - MAKE SURE THIS LINE EXISTS
+app.use('/api', orderRoutes);
+
+app.use('/api/cart', cartRoutes); // Use cart routes
 
 // Connect to database
 connectDB();
@@ -74,7 +77,16 @@ app.get('/api/debug/routes', (req, res) => {
         'GET /api/products/:id',
         'PUT /api/products/:id',
         'DELETE /api/products/:id'
+      ],
+      cart: [
+        'GET /api/cart',
+        'POST /api/cart/add',
+        'PUT /api/cart/update/:productId',
+        'DELETE /api/cart/remove/:productId',
+        'DELETE /api/cart/clear',
+        'POST /api/cart/sync'
       ]
+      
     }
   });
 });

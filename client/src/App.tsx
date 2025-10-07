@@ -5,6 +5,7 @@ import {
   Navigate,
 } from "react-router-dom";
 import Navbar from "./components/Navbar";
+import Footer from "./components/Footer";
 import Register from "./pages/Register";
 import Login from "./pages/Login";
 import UserDashboard from "./pages/UserDashboard";
@@ -12,11 +13,14 @@ import AdminCategoryPage from "./components/AdminCategoryPage";
 import VendorDashboard from "./pages/VendorDashboard";
 import AdminDashboard from "./pages/AdminDashboard";
 import { isLoggedIn, getUserRole } from "./utils/auth";
-import HomePage from "./pages/HomePage";
+import HomePage from "./pages/ProductPage";
 import PurchasePage from "./pages/PurchasePage";
 import ProductDetailPage from "./components/ProductDetailPage";
 import OrderSuccessPage from "./pages/OrderSuccessPage";
 import PaymentSuccess from "./pages/PaymentSuccess";
+import { CartProvider } from './context/CartContext';
+import CartPage from './pages/CartPage';
+
 
 // Optional future vendor pages (import later if needed)
 // import VendorProductEdit from "./pages/VendorProductEdit";
@@ -43,13 +47,14 @@ const ProtectedRoute = ({ children, requiredRole }: ProtectedRouteProps) => {
 
 function App() {
   return (
+    <CartProvider>
     <Router>
       <div className="min-h-screen bg-gray-100">
         <Navbar />
         <div className="p-6">
           <Routes>
             {/* Home */}
-          <Route path="/" element={<HomePage />} />
+          <Route path="/products" element={<HomePage />} />
 
             <Route path="/product/:id" element={<ProductDetailPage />} />
             <Route path="/purchase/:id" element={<PurchasePage />} />
@@ -72,6 +77,8 @@ function App() {
                 </ProtectedRoute>
               }
             />
+
+            <Route path="/cart" element={<CartPage />} />
 
             {/* Vendor future routes (for expansion) */}
             {/*
@@ -103,6 +110,10 @@ function App() {
               }
             />
 
+            <Route path="/cart" element={<ProtectedRoute><UserDashboard /></ProtectedRoute>} />
+
+
+
 
             <Route path="/payment/success" element={<PaymentSuccess />} />
 
@@ -111,8 +122,10 @@ function App() {
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </div>
+        <Footer />
       </div>
     </Router>
+    </CartProvider>
   );
 }
 
