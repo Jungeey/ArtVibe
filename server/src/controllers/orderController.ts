@@ -1,16 +1,19 @@
-import { Request, Response } from 'express';
+import { Response } from 'express';
 import Order from '../models/Order';
 import Product from '../models/Product';
+import { AuthRequest } from '../middleware/auth';
+import { Request } from 'express';
 
-export const createOrderAndUpdateStock = async (req: Request, res: Response) => {
+export const createOrderAndUpdateStock = async (req: AuthRequest, res: Response) => {
   try {
-    const { pidx, transactionId, productId, quantity, totalAmount, customerInfo } = req.body;
+    const { pidx, transactionId, productId, quantity, totalAmount, customerInfo, shippingAddress } = req.body;
 
     console.log('📦 Creating order request:', {
       pidx, 
       productId, 
       quantity, 
-      totalAmount
+      totalAmount,
+      user: req.user?.id
     });
 
     // Validate required fields
@@ -20,6 +23,13 @@ export const createOrderAndUpdateStock = async (req: Request, res: Response) => 
     if (missingFields.length > 0) {
       return res.status(400).json({
         error: `Missing required fields: ${missingFields.join(', ')}`
+      });
+    }
+
+    // Check if user is authenticated
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({
+        error: 'Authentication required to create order'
       });
     }
 
@@ -52,20 +62,30 @@ export const createOrderAndUpdateStock = async (req: Request, res: Response) => 
       });
     }
 
-    // 4. Create order
+    // 4. Create order with user ID - UPDATED STATUSES
     const orderData = {
       pidx,
       transactionId,
       product: productId,
+      user: req.user.id,
       quantity,
       totalAmount,
       customerInfo: customerInfo || {
-        name: "Customer",
-        email: "customer@example.com",
+        name: req.user.name || "Customer",
+        email: req.user.email || "customer@example.com",
         phone: "9800000000"
       },
-      status: 'completed' as const,
-      paymentStatus: 'completed' as const
+      shippingAddress: shippingAddress || {
+        fullName: req.user.name || "Customer",
+        street: "123 Main St",
+        city: "Kathmandu",
+        state: "Bagmati",
+        zipCode: "44600",
+        country: "Nepal",
+        phone: "9800000000"
+      },
+      status: 'confirmed' as const, // UPDATED: Start with 'confirmed'
+      paymentStatus: 'completed' as const // UPDATED: Payment is completed
     };
 
     const order = new Order(orderData);
@@ -75,7 +95,6 @@ export const createOrderAndUpdateStock = async (req: Request, res: Response) => 
     const oldStock = product.stockQuantity;
     product.stockQuantity -= quantity;
     
-    // If stock becomes 0, update product status
     if (product.stockQuantity === 0) {
       product.status = 'unlisted';
       console.log(`🔄 Product ${product.name} marked as unlisted due to zero stock`);
@@ -83,34 +102,55 @@ export const createOrderAndUpdateStock = async (req: Request, res: Response) => 
     
     await product.save();
 
-    // Populate product details for response
-    await order.populate('product');
+    // Get populated order
+    const populatedOrder = await Order.findById(order._id)
+      .populate('product', 'name price images primaryImage')
+      .populate('user', 'name email');
+
+    if (!populatedOrder) {
+      return res.status(500).json({
+        error: 'Failed to retrieve created order'
+      });
+    }
 
     console.log('✅ Order created successfully:', {
-      orderId: order._id,
-      product: product.name,
+      orderId: populatedOrder._id,
+      userId: (populatedOrder as any).user?._id,
+      product: (populatedOrder as any).product?.name,
       quantity,
       totalAmount,
       stockUpdate: `${oldStock} → ${product.stockQuantity}`
     });
 
+    // Use type assertion for populated fields
+    const populatedOrderAny = populatedOrder as any;
+
     res.status(201).json({
       success: true,
       message: 'Order created and stock updated successfully',
       order: {
-        _id: order._id,
-        pidx: order.pidx,
-        transactionId: order.transactionId,
-        product: {
-          _id: product._id,
-          name: product.name,
-          price: product.price
-        },
-        quantity: order.quantity,
-        totalAmount: order.totalAmount,
-        status: order.status,
-        paymentStatus: order.paymentStatus,
-        createdAt: order.createdAt
+        _id: populatedOrder._id,
+        pidx: populatedOrder.pidx,
+        transactionId: populatedOrder.transactionId,
+        user: populatedOrderAny.user ? {
+          _id: populatedOrderAny.user._id,
+          name: populatedOrderAny.user.name,
+          email: populatedOrderAny.user.email
+        } : null,
+        product: populatedOrderAny.product ? {
+          _id: populatedOrderAny.product._id,
+          name: populatedOrderAny.product.name,
+          price: populatedOrderAny.product.price,
+          images: populatedOrderAny.product.images,
+          primaryImage: populatedOrderAny.product.primaryImage
+        } : null,
+        quantity: populatedOrder.quantity,
+        totalAmount: populatedOrder.totalAmount,
+        customerInfo: populatedOrder.customerInfo,
+        shippingAddress: populatedOrder.shippingAddress,
+        status: populatedOrder.status,
+        paymentStatus: populatedOrder.paymentStatus,
+        createdAt: populatedOrder.createdAt
       },
       stockUpdate: {
         productId: product._id,
@@ -123,7 +163,6 @@ export const createOrderAndUpdateStock = async (req: Request, res: Response) => 
   } catch (error: any) {
     console.error('❌ Error creating order:', error);
     
-    // MongoDB duplicate key error
     if (error.code === 11000) {
       return res.status(409).json({
         error: 'Order with this pidx already exists',
@@ -131,7 +170,6 @@ export const createOrderAndUpdateStock = async (req: Request, res: Response) => 
       });
     }
     
-    // MongoDB validation error
     if (error.name === 'ValidationError') {
       return res.status(400).json({
         error: 'Validation failed',
@@ -146,7 +184,7 @@ export const createOrderAndUpdateStock = async (req: Request, res: Response) => 
   }
 };
 
-export const getOrderByPidx = async (req: Request, res: Response) => {
+export const getOrderByPidx = async (req: AuthRequest, res: Response) => {
   try {
     const { pidx } = req.params;
     
@@ -156,6 +194,7 @@ export const getOrderByPidx = async (req: Request, res: Response) => {
 
     const order = await Order.findOne({ pidx })
       .populate('product', 'name price images primaryImage')
+      .populate('user', 'name email')
       .select('-__v');
     
     if (!order) {
@@ -165,9 +204,35 @@ export const getOrderByPidx = async (req: Request, res: Response) => {
       });
     }
 
+    // FIX: Use type assertion for populated fields
+    const orderAny = order as any;
+
     res.json({
       success: true,
-      order
+      order: {
+        _id: order._id,
+        pidx: order.pidx,
+        transactionId: order.transactionId,
+        user: orderAny.user ? {
+          _id: orderAny.user._id,
+          name: orderAny.user.name,
+          email: orderAny.user.email
+        } : null,
+        product: orderAny.product ? {
+          _id: orderAny.product._id,
+          name: orderAny.product.name,
+          price: orderAny.product.price,
+          images: orderAny.product.images,
+          primaryImage: orderAny.product.primaryImage
+        } : null,
+        quantity: order.quantity,
+        totalAmount: order.totalAmount,
+        customerInfo: order.customerInfo,
+        status: order.status,
+        paymentStatus: order.paymentStatus,
+        createdAt: order.createdAt,
+        updatedAt: order.updatedAt
+      }
     });
 
   } catch (error) {
@@ -185,7 +250,8 @@ export const getOrdersByProduct = async (req: Request, res: Response) => {
     const { page = 1, limit = 10 } = req.query;
 
     const orders = await Order.find({ product: productId })
-      .populate('product', 'name price')
+      .populate('product', 'name price images primaryImage')
+      .populate('user', 'name email')
       .sort({ createdAt: -1 })
       .limit(Number(limit) * 1)
       .skip((Number(page) - 1) * Number(limit))
@@ -193,9 +259,38 @@ export const getOrdersByProduct = async (req: Request, res: Response) => {
 
     const total = await Order.countDocuments({ product: productId });
 
+    // FIX: Transform orders with proper populated fields
+    const transformedOrders = orders.map(order => {
+      const orderAny = order as any;
+      return {
+        _id: order._id,
+        pidx: order.pidx,
+        transactionId: order.transactionId,
+        user: orderAny.user ? {
+          _id: orderAny.user._id,
+          name: orderAny.user.name,
+          email: orderAny.user.email
+        } : null,
+        product: orderAny.product ? {
+          _id: orderAny.product._id,
+          name: orderAny.product.name,
+          price: orderAny.product.price,
+          images: orderAny.product.images,
+          primaryImage: orderAny.product.primaryImage
+        } : null,
+        quantity: order.quantity,
+        totalAmount: order.totalAmount,
+        customerInfo: order.customerInfo,
+        status: order.status,
+        paymentStatus: order.paymentStatus,
+        createdAt: order.createdAt,
+        updatedAt: order.updatedAt
+      };
+    });
+
     res.json({
       success: true,
-      orders,
+      orders: transformedOrders,
       pagination: {
         page: Number(page),
         limit: Number(limit),

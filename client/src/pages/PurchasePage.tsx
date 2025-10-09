@@ -37,13 +37,14 @@ interface KhaltiInitiateResponse {
   expires_in: number;
 }
 
-interface KhaltiLookupResponse {
-  pidx: string;
-  total_amount: number;
-  status: 'Completed' | 'Pending' | 'Initiated' | 'Refunded' | 'Expired' | 'User canceled' | 'Partially Refunded';
-  transaction_id: string | null;
-  fee: number;
-  refunded: boolean;
+interface ShippingAddress {
+  fullName: string;
+  street: string;
+  city: string;
+  state: string;
+  zipCode: string;
+  country: string;
+  phone: string;
 }
 
 const PurchasePage: React.FC = () => {
@@ -54,6 +55,17 @@ const PurchasePage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>('');
   const [processing, setProcessing] = useState(false);
+
+  // Shipping address state
+  const [shippingAddress, setShippingAddress] = useState<ShippingAddress>({
+    fullName: '',
+    street: '',
+    city: '',
+    state: '',
+    zipCode: '',
+    country: 'Nepal',
+    phone: ''
+  });
 
   // Fetch product data
   useEffect(() => {
@@ -97,6 +109,49 @@ const PurchasePage: React.FC = () => {
     }
   };
 
+  const handleAddressChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setShippingAddress(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const validateShippingAddress = (): boolean => {
+    const { fullName, street, city, state, zipCode, phone } = shippingAddress;
+    
+    if (!fullName.trim()) {
+      setError('Full name is required');
+      return false;
+    }
+    if (!street.trim()) {
+      setError('Street address is required');
+      return false;
+    }
+    if (!city.trim()) {
+      setError('City is required');
+      return false;
+    }
+    if (!state.trim()) {
+      setError('State is required');
+      return false;
+    }
+    if (!zipCode.trim()) {
+      setError('ZIP code is required');
+      return false;
+    }
+    if (!phone.trim()) {
+      setError('Phone number is required');
+      return false;
+    }
+    if (!/^\d{10}$/.test(phone)) {
+      setError('Phone number must be 10 digits');
+      return false;
+    }
+
+    return true;
+  };
+
   // Initiate Khalti payment using the new ePayment API
   const initiateKhaltiPayment = async () => {
     if (!product) return;
@@ -104,6 +159,12 @@ const PurchasePage: React.FC = () => {
     try {
       setProcessing(true);
       setError('');
+
+      // Validate shipping address
+      if (!validateShippingAddress()) {
+        setProcessing(false);
+        return;
+      }
 
       const amount = product.price * quantity * 100; // Convert to paisa
 
@@ -114,9 +175,10 @@ const PurchasePage: React.FC = () => {
         return;
       }
 
-      // Store quantity for use in success page
+      // Store data for use in success page
       localStorage.setItem('purchase_quantity', quantity.toString());
       localStorage.setItem('purchase_product_id', product._id);
+      localStorage.setItem('shipping_address', JSON.stringify(shippingAddress));
 
       // Generate unique purchase order ID
       const purchaseOrderId = `order_${product._id}_${Date.now()}`;
@@ -129,9 +191,9 @@ const PurchasePage: React.FC = () => {
         purchase_order_id: purchaseOrderId,
         purchase_order_name: product.name,
         customer_info: {
-          name: "Customer", // You can get this from user context if available
+          name: shippingAddress.fullName,
           email: "customer@example.com", // You can get this from user context if available
-          phone: "9800000000" // You can get this from user context if available
+          phone: shippingAddress.phone
         },
         amount_breakdown: [
           {
@@ -152,7 +214,6 @@ const PurchasePage: React.FC = () => {
 
       console.log('Initiating Khalti payment:', payload);
 
-      // ✅ FIX: Use axios instead of fetch to use the baseURL
       const response = await fetch('http://localhost:5000/api/payments/khalti/initiate', {
         method: 'POST',
         headers: {
@@ -161,7 +222,6 @@ const PurchasePage: React.FC = () => {
         body: JSON.stringify(payload),
       });
 
-      // ✅ FIX: Better error handling
       if (!response.ok) {
         let errorMessage = 'Failed to initiate payment';
         try {
@@ -185,31 +245,6 @@ const PurchasePage: React.FC = () => {
       setError(error.message || 'Failed to initiate payment. Please try again.');
     } finally {
       setProcessing(false);
-    }
-  };
-
-  // Verify payment status (to be called after redirect from Khalti)
-  const verifyPayment = async (pidx: string): Promise<boolean> => {
-    try {
-      // ✅ FIX: Use full URL for lookup too
-      const response = await fetch('http://localhost:5000/api/payments/khalti/lookup', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ pidx }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Payment verification failed');
-      }
-
-      const data: KhaltiLookupResponse = await response.json();
-
-      return data.status === 'Completed';
-    } catch (error) {
-      console.error('Payment verification error:', error);
-      return false;
     }
   };
 
@@ -273,6 +308,104 @@ const PurchasePage: React.FC = () => {
       </button>
 
       <h1 className="text-2xl font-bold mb-6">Complete Your Purchase</h1>
+
+      {/* Shipping Address Section */}
+      <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+        <h2 className="text-lg font-semibold mb-4">Shipping Address</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="md:col-span-2">
+            <label className="block text-sm font-medium mb-2">Full Name *</label>
+            <input
+              type="text"
+              name="fullName"
+              value={shippingAddress.fullName}
+              onChange={handleAddressChange}
+              className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="Enter your full name"
+              required
+            />
+          </div>
+          
+          <div className="md:col-span-2">
+            <label className="block text-sm font-medium mb-2">Street Address *</label>
+            <input
+              type="text"
+              name="street"
+              value={shippingAddress.street}
+              onChange={handleAddressChange}
+              className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="Enter your street address"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-2">City *</label>
+            <input
+              type="text"
+              name="city"
+              value={shippingAddress.city}
+              onChange={handleAddressChange}
+              className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="Enter your city"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-2">State *</label>
+            <input
+              type="text"
+              name="state"
+              value={shippingAddress.state}
+              onChange={handleAddressChange}
+              className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="Enter your state"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-2">ZIP Code *</label>
+            <input
+              type="text"
+              name="zipCode"
+              value={shippingAddress.zipCode}
+              onChange={handleAddressChange}
+              className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="Enter ZIP code"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-2">Country</label>
+            <input
+              type="text"
+              name="country"
+              value={shippingAddress.country}
+              onChange={handleAddressChange}
+              className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="Enter your country"
+            />
+          </div>
+
+          <div className="md:col-span-2">
+            <label className="block text-sm font-medium mb-2">Phone Number *</label>
+            <input
+              type="tel"
+              name="phone"
+              value={shippingAddress.phone}
+              onChange={handleAddressChange}
+              className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="9800000000"
+              pattern="[0-9]{10}"
+              required
+            />
+            <p className="text-xs text-gray-500 mt-1">10-digit phone number without spaces or dashes</p>
+          </div>
+        </div>
+      </div>
 
       {/* Payment Method Selection */}
       <div className="bg-white rounded-lg shadow-md p-6 mb-6">
@@ -342,6 +475,12 @@ const PurchasePage: React.FC = () => {
             </div>
           </div>
         </div>
+
+        {error && (
+          <div className="mb-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+            {error}
+          </div>
+        )}
 
         <div className="space-y-3">
           <button

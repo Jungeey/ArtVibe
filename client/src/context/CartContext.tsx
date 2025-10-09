@@ -37,7 +37,7 @@ type CartAction =
 // Context
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
-// Reducer
+// Reducer - FIXED VERSION
 const cartReducer = (state: CartState, action: CartAction): CartState => {
   switch (action.type) {
     case 'SET_LOADING':
@@ -48,42 +48,74 @@ const cartReducer = (state: CartState, action: CartAction): CartState => {
 
     case 'ADD_ITEM':
       const existingItem = state.items.find(item => item.product === action.payload.product);
+      let newItems: CartItem[];
       
       if (existingItem) {
-        const updatedItems = state.items.map(item =>
+        newItems = state.items.map(item =>
           item.product === action.payload.product
             ? { ...item, quantity: item.quantity + action.payload.quantity }
             : item
         );
-        const total = updatedItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-        const itemCount = updatedItems.reduce((sum, item) => sum + item.quantity, 0);
-        
-        return { ...state, items: updatedItems, total, itemCount, error: null };
       } else {
-        const newItems = [...state.items, action.payload];
-        const total = newItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-        const itemCount = newItems.reduce((sum, item) => sum + item.quantity, 0);
-        
-        return { ...state, items: newItems, total, itemCount, error: null };
+        newItems = [...state.items, action.payload];
       }
+      
+      const total = newItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+      const itemCount = newItems.reduce((sum, item) => sum + item.quantity, 0);
+      
+      return { 
+        ...state, 
+        items: newItems, 
+        total, 
+        itemCount, 
+        error: null 
+      };
 
     case 'REMOVE_ITEM':
       const filteredItems = state.items.filter(item => item.product !== action.payload);
       const filteredTotal = filteredItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
       const filteredCount = filteredItems.reduce((sum, item) => sum + item.quantity, 0);
       
-      return { ...state, items: filteredItems, total: filteredTotal, itemCount: filteredCount, error: null };
+      return { 
+        ...state, 
+        items: filteredItems, 
+        total: filteredTotal, 
+        itemCount: filteredCount, 
+        error: null 
+      };
 
     case 'UPDATE_QUANTITY':
-      const quantityUpdatedItems = state.items.map(item =>
-        item.product === action.payload.productId
-          ? { ...item, quantity: action.payload.quantity }
-          : item
-      );
-      const quantityTotal = quantityUpdatedItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-      const quantityCount = quantityUpdatedItems.reduce((sum, item) => sum + item.quantity, 0);
-      
-      return { ...state, items: quantityUpdatedItems, total: quantityTotal, itemCount: quantityCount, error: null };
+      if (action.payload.quantity < 1) {
+        // If quantity is 0, remove the item
+        const itemsAfterRemove = state.items.filter(item => item.product !== action.payload.productId);
+        const totalAfterRemove = itemsAfterRemove.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+        const countAfterRemove = itemsAfterRemove.reduce((sum, item) => sum + item.quantity, 0);
+        
+        return { 
+          ...state, 
+          items: itemsAfterRemove, 
+          total: totalAfterRemove, 
+          itemCount: countAfterRemove, 
+          error: null 
+        };
+      } else {
+        // Update quantity
+        const quantityUpdatedItems = state.items.map(item =>
+          item.product === action.payload.productId
+            ? { ...item, quantity: action.payload.quantity }
+            : item
+        );
+        const quantityTotal = quantityUpdatedItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+        const quantityCount = quantityUpdatedItems.reduce((sum, item) => sum + item.quantity, 0);
+        
+        return { 
+          ...state, 
+          items: quantityUpdatedItems, 
+          total: quantityTotal, 
+          itemCount: quantityCount, 
+          error: null 
+        };
+      }
 
     case 'CLEAR_CART':
       return { 
@@ -91,7 +123,7 @@ const cartReducer = (state: CartState, action: CartAction): CartState => {
         total: 0, 
         itemCount: 0, 
         isLoading: false, 
-        lastSynced: null,
+        lastSynced: state.lastSynced,
         error: null 
       };
 
@@ -124,12 +156,23 @@ const loadFromLocalStorage = (): CartState => {
   } catch (error) {
     console.error('Failed to load cart from localStorage:', error);
   }
-  return { items: [], total: 0, itemCount: 0, isLoading: false, lastSynced: null, error: null };
+  return { 
+    items: [], 
+    total: 0, 
+    itemCount: 0, 
+    isLoading: false, 
+    lastSynced: null, 
+    error: null 
+  };
 };
 
 const saveToLocalStorage = (cart: CartState): void => {
   try {
-    localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(cart));
+    const cartToSave = {
+      ...cart,
+      isLoading: false // Don't save loading state
+    };
+    localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(cartToSave));
   } catch (error) {
     console.error('Failed to save cart to localStorage:', error);
   }
@@ -154,7 +197,7 @@ const transformCartResponse = (cartData: CartResponse): CartState => {
   };
 };
 
-// Provider Component
+// Provider Component - FIXED VERSION
 export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [cart, dispatch] = useReducer(cartReducer, {
     items: [],
@@ -231,7 +274,7 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
-  // Public methods
+  // Public methods - FIXED VERSION
   const addToCart = async (product: any): Promise<void> => {
     const cartItem: CartItem = {
       product: product._id,
@@ -242,92 +285,89 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       stockQuantity: product.stockQuantity
     };
 
-    // Optimistic UI update
-    dispatch({ type: 'ADD_ITEM', payload: cartItem });
+    try {
+      // Optimistic UI update
+      dispatch({ type: 'ADD_ITEM', payload: cartItem });
 
-    if (isLoggedIn()) {
-      try {
+      if (isLoggedIn()) {
         await addToCartAPI(product);
         dispatch({ type: 'SET_SYNCED', payload: new Date() });
-      } catch (error) {
-        // Revert on error
-        dispatch({ type: 'REMOVE_ITEM', payload: product._id });
-        dispatch({ type: 'SET_ERROR', payload: (error as Error).message });
-        throw error;
       }
-    } else {
-      // Save to localStorage for guest users
-      saveToLocalStorage(cart);
+      
+      // For both logged in and guest users, save to localStorage
+      // This will happen automatically in the useEffect below
+      
+    } catch (error) {
+      // Revert on error
+      dispatch({ type: 'REMOVE_ITEM', payload: product._id });
+      dispatch({ type: 'SET_ERROR', payload: (error as Error).message });
+      throw error;
     }
   };
 
   const removeFromCart = async (productId: string): Promise<void> => {
-    // Store item for potential revert
-    const itemToRemove = cart.items.find(item => item.product === productId);
-    
-    // Optimistic UI update
-    dispatch({ type: 'REMOVE_ITEM', payload: productId });
+    try {
+      // Store item for potential revert
+      const itemToRemove = cart.items.find(item => item.product === productId);
+      
+      // Optimistic UI update
+      dispatch({ type: 'REMOVE_ITEM', payload: productId });
 
-    if (isLoggedIn() && itemToRemove) {
-      try {
+      if (isLoggedIn() && itemToRemove) {
         await removeFromCartAPI(productId);
         dispatch({ type: 'SET_SYNCED', payload: new Date() });
-      } catch (error) {
-        // Revert on error
-        if (itemToRemove) {
-          dispatch({ type: 'ADD_ITEM', payload: itemToRemove });
-        }
-        dispatch({ type: 'SET_ERROR', payload: (error as Error).message });
-        throw error;
       }
-    } else {
-      saveToLocalStorage(cart);
+      
+    } catch (error) {
+      // Revert on error
+      const currentState = loadFromLocalStorage();
+      dispatch({ type: 'LOAD_CART', payload: currentState });
+      dispatch({ type: 'SET_ERROR', payload: (error as Error).message });
+      throw error;
     }
   };
 
   const updateQuantity = async (productId: string, quantity: number): Promise<void> => {
-    // Store old quantity for potential revert
-    const oldItem = cart.items.find(item => item.product === productId);
-    
-    // Optimistic UI update
-    dispatch({ type: 'UPDATE_QUANTITY', payload: { productId, quantity } });
+    try {
+      // Store old state for potential revert
+      const oldState = { ...cart };
+      
+      // Optimistic UI update
+      dispatch({ type: 'UPDATE_QUANTITY', payload: { productId, quantity } });
 
-    if (isLoggedIn() && oldItem) {
-      try {
+      if (isLoggedIn()) {
         await updateQuantityAPI(productId, quantity);
         dispatch({ type: 'SET_SYNCED', payload: new Date() });
-      } catch (error) {
-        // Revert on error
-        if (oldItem) {
-          dispatch({ type: 'UPDATE_QUANTITY', payload: { productId, quantity: oldItem.quantity } });
-        }
-        dispatch({ type: 'SET_ERROR', payload: (error as Error).message });
-        throw error;
       }
-    } else {
-      saveToLocalStorage(cart);
+      
+    } catch (error) {
+      // Revert on error
+      const currentState = loadFromLocalStorage();
+      dispatch({ type: 'LOAD_CART', payload: currentState });
+      dispatch({ type: 'SET_ERROR', payload: (error as Error).message });
+      throw error;
     }
   };
 
   const clearCart = async (): Promise<void> => {
-    // Store items for potential revert
-    const itemsToClear = [...cart.items];
-    
-    // Optimistic UI update
-    dispatch({ type: 'CLEAR_CART' });
+    try {
+      // Store items for potential revert
+      const itemsToClear = [...cart.items];
+      
+      // Optimistic UI update
+      dispatch({ type: 'CLEAR_CART' });
 
-    if (isLoggedIn() && itemsToClear.length > 0) {
-      try {
+      if (isLoggedIn() && itemsToClear.length > 0) {
         await clearCartAPI();
         dispatch({ type: 'SET_SYNCED', payload: new Date() });
-      } catch (error) {
-        // Revert on error
-        dispatch({ type: 'LOAD_CART', payload: { ...cart, items: itemsToClear, isLoading: false } });
-        dispatch({ type: 'SET_ERROR', payload: (error as Error).message });
-        throw error;
       }
-    } else {
-      saveToLocalStorage(cart);
+      
+    } catch (error) {
+      // Revert on error
+      const currentState = loadFromLocalStorage();
+      dispatch({ type: 'LOAD_CART', payload: currentState });
+      dispatch({ type: 'SET_ERROR', payload: (error as Error).message });
+      throw error;
     }
   };
 
@@ -351,18 +391,21 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         dispatch({ type: 'LOAD_CART', payload: apiCart });
       } catch (error) {
         console.error('Failed to refresh cart:', error);
+        // Fall back to localStorage
+        const localCart = loadFromLocalStorage();
+        dispatch({ type: 'LOAD_CART', payload: localCart });
         dispatch({ type: 'SET_ERROR', payload: (error as Error).message });
       }
     }
   };
 
-  // Load cart on mount and auth changes
+  // Load cart on mount and auth changes - FIXED VERSION
   useEffect(() => {
     const loadCart = async () => {
       dispatch({ type: 'SET_LOADING', payload: true });
       
-      if (isLoggedIn()) {
-        try {
+      try {
+        if (isLoggedIn()) {
           const apiCart = await fetchCartFromAPI();
           dispatch({ type: 'LOAD_CART', payload: apiCart });
           
@@ -374,27 +417,28 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             // Clear local storage after successful merge
             localStorage.removeItem(CART_STORAGE_KEY);
           }
-        } catch (error) {
-          console.error('Failed to load cart from API, falling back to local storage:', error);
+        } else {
+          // Guest user - load from localStorage only
           const localCart = loadFromLocalStorage();
           dispatch({ type: 'LOAD_CART', payload: localCart });
         }
-      } else {
-        // Guest user - load from localStorage only
+      } catch (error) {
+        console.error('Failed to load cart, using local storage:', error);
         const localCart = loadFromLocalStorage();
         dispatch({ type: 'LOAD_CART', payload: localCart });
+        dispatch({ type: 'SET_ERROR', payload: (error as Error).message });
       }
     };
 
     loadCart();
-  }, [isLoggedIn()]);
+  }, []); // Remove isLoggedIn() dependency to avoid infinite loops
 
-  // Save to localStorage whenever cart changes (for guest users and backup)
+  // Save to localStorage whenever cart changes (for guest users and backup) - FIXED
   useEffect(() => {
-    if (!cart.isLoading) {
+    if (!cart.isLoading && cart.items.length >= 0) {
       saveToLocalStorage(cart);
     }
-  }, [cart.items, cart.total, cart.isLoading]);
+  }, [cart.items, cart.total, cart.itemCount]); // Only depend on actual data, not loading state
 
   const value: CartContextType = {
     cart,

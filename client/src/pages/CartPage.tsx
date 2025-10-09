@@ -1,7 +1,6 @@
 import React from 'react';
 import { useCart } from '../context/CartContext';
 import { useNavigate } from 'react-router-dom';
-import { isLoggedIn } from '../utils/auth';
 import { Link } from 'react-router-dom';
 
 const CartPage: React.FC = () => {

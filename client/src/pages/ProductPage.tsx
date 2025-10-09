@@ -119,27 +119,6 @@ const ProductPage: React.FC = () => {
     }
   };
 
-  // Handle add to wishlist (placeholder - you can implement this later)
-  const handleAddToWishlist = async (product: Product, e: React.MouseEvent) => {
-    e.stopPropagation();
-    
-    if (!isLoggedIn()) {
-      navigate('/login', { state: { returnUrl: window.location.pathname } });
-      return;
-    }
-
-    // TODO: Implement wishlist functionality
-    console.log('Add to wishlist:', product._id);
-    
-    // Show alert for this specific product
-    setWishlistAlerts(prev => ({ ...prev, [product._id]: true }));
-    
-    // Hide alert after 2 seconds
-    setTimeout(() => {
-      setWishlistAlerts(prev => ({ ...prev, [product._id]: false }));
-    }, 2000);
-  };
-
   // Check if product is in cart
   const isProductInCart = (productId: string): boolean => {
     return cart.items.some(item => item.product === productId);
@@ -382,12 +361,6 @@ const ProductPage: React.FC = () => {
                   {cartAlerts[product._id] && (
                     <div className="bg-green-100 border border-green-400 text-green-700 px-3 py-2 rounded mb-2 text-sm">
                       ✅ Added to cart!
-                    </div>
-                  )}
-
-                  {wishlistAlerts[product._id] && (
-                    <div className="bg-blue-100 border border-blue-400 text-blue-700 px-3 py-2 rounded mb-2 text-sm">
-                      💖 Added to wishlist!
                     </div>
                   )}
 

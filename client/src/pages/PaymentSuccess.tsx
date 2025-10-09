@@ -1,5 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { createOrder, getOrderByPidx, OrderStatusDisplay } from '../services/orderService';
+import { getToken, getUser } from '../utils/auth';
 
 interface OrderData {
   _id: string;
@@ -12,7 +14,23 @@ interface OrderData {
   };
   quantity: number;
   totalAmount: number;
-  status: string;
+  customerInfo: {
+    name: string;
+    email: string;
+    phone: string;
+  };
+  shippingAddress: {
+    fullName: string;
+    street: string;
+    city: string;
+    state: string;
+    zipCode: string;
+    country: string;
+    phone: string;
+  };
+  status: 'confirmed' | 'processing' | 'ready_to_ship' | 'shipped' | 'out_for_delivery' | 'delivered' | 'cancelled' | 'refunded' | 'failed';
+  paymentStatus: 'completed' | 'refunded';
+  createdAt: string;
 }
 
 const PaymentSuccess: React.FC = () => {
@@ -21,13 +39,16 @@ const PaymentSuccess: React.FC = () => {
   const [verificationStatus, setVerificationStatus] = useState<'verifying' | 'success' | 'failed'>('verifying');
   const [orderData, setOrderData] = useState<OrderData | null>(null);
   const [error, setError] = useState<string>('');
+  
+  // Add ref to track if processing has already started
+  const isProcessing = useRef(false);
+  const processedPidx = useRef<string | null>(null);
 
   useEffect(() => {
     const processPaymentSuccess = async () => {
       const searchParams = new URLSearchParams(location.search);
       
-      // ✅ FIX: Get the correct pidx (the Khalti one, not your custom one)
-      const pidx = searchParams.get('pidx'); // This will get the LAST pidx in URL
+      const pidx = searchParams.get('pidx');
       const status = searchParams.get('status');
       const transactionId = searchParams.get('transaction_id');
       const amount = searchParams.get('amount');
@@ -41,14 +62,24 @@ const PaymentSuccess: React.FC = () => {
         purchaseOrderId
       });
 
+      // Prevent duplicate processing
       if (!pidx) {
         setVerificationStatus('failed');
         setError('Payment reference not found');
         return;
       }
 
+      // Check if we're already processing this pidx
+      if (isProcessing.current || processedPidx.current === pidx) {
+        console.log('🛑 Already processing or processed this payment:', pidx);
+        return;
+      }
+
+      // Mark as processing
+      isProcessing.current = true;
+      processedPidx.current = pidx;
+
       try {
-        // ✅ FIX: Debug the lookup request
         console.log('Making lookup request for pidx:', pidx);
 
         // 1. Verify payment with Khalti
@@ -62,7 +93,6 @@ const PaymentSuccess: React.FC = () => {
 
         console.log('Lookup response status:', lookupResponse.status);
 
-        // ✅ FIX: Better error handling for lookup
         if (!lookupResponse.ok) {
           if (lookupResponse.status === 404) {
             throw new Error('Payment verification service not found. Please contact support.');
@@ -80,8 +110,16 @@ const PaymentSuccess: React.FC = () => {
           return;
         }
 
-        // ✅ FIX: Check if we already have successful payment from URL parameters
-        // If Khalti lookup fails but URL shows success, we can trust the URL
+        // Check if user is authenticated
+        const token = getToken();
+        const user = getUser();
+        
+        if (!token || !user) {
+          setVerificationStatus('failed');
+          setError('Please login to complete your order');
+          return;
+        }
+
         if (status === 'Completed' && transactionId) {
           console.log('Payment already confirmed via URL parameters');
           
@@ -93,38 +131,61 @@ const PaymentSuccess: React.FC = () => {
             throw new Error('Could not identify purchased product');
           }
 
-          // Create order and update stock
+          // UPDATED: Include shipping address in order payload
           const orderPayload = {
             pidx: pidx,
             transactionId: transactionId,
             productId: productId,
             quantity: quantity,
-            totalAmount: parseInt(amount || '0') / 100, // Convert from paisa to NPR
+            totalAmount: parseInt(amount || '0') / 100,
             customerInfo: {
-              name: "Customer", // You can get this from context/auth
-              email: "customer@example.com",
+              name: user.name || "Customer",
+              email: user.email,
+              phone: "9800000000"
+            },
+            shippingAddress: {
+              fullName: user.name || "Customer",
+              street: getStoredShippingAddress().street || "123 Main St",
+              city: getStoredShippingAddress().city || "Kathmandu",
+              state: getStoredShippingAddress().state || "Bagmati",
+              zipCode: getStoredShippingAddress().zipCode || "44600",
+              country: getStoredShippingAddress().country || "Nepal",
               phone: "9800000000"
             }
           };
 
           console.log('Creating order with payload:', orderPayload);
 
-          const orderResponse = await fetch('http://localhost:5000/api/orders', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(orderPayload),
-          });
-
-          if (!orderResponse.ok) {
-            const errorText = await orderResponse.text();
-            throw new Error(`Order creation failed: ${errorText}`);
+          try {
+            // Try to create order
+            const orderResult = await createOrder(orderPayload);
+            setOrderData({
+              ...orderResult.order,
+              transactionId: orderResult.order.transactionId ?? '',
+            });
+            setVerificationStatus('success');
+          } catch (orderError: any) {
+            // Handle 409 conflict gracefully - order already exists
+            if (orderError.message.includes('already exists') || orderError.message.includes('409')) {
+              console.log('✅ Order already exists, fetching existing order...');
+              
+              // Try to fetch the existing order by pidx using our service
+              try {
+                const existingOrderData = await getOrderByPidx(pidx);
+                setOrderData({
+                  ...existingOrderData.order,
+                  transactionId: existingOrderData.order.transactionId ?? '',
+                });
+                setVerificationStatus('success');
+              } catch (fetchError) {
+                // If fetching fails, still show success
+                console.log('Could not fetch existing order, but payment was successful');
+                setVerificationStatus('success');
+              }
+            } else {
+              throw orderError; // Re-throw other errors
+            }
           }
-
-          const orderResult = await orderResponse.json();
-          setOrderData(orderResult.order);
-          setVerificationStatus('success');
           
         } else {
           setVerificationStatus('failed');
@@ -135,6 +196,9 @@ const PaymentSuccess: React.FC = () => {
         console.error('Payment processing error:', error);
         setVerificationStatus('failed');
         setError(error.message || 'Failed to process payment. Please contact support.');
+      } finally {
+        // Reset processing flag
+        isProcessing.current = false;
       }
     };
 
@@ -148,9 +212,8 @@ const PaymentSuccess: React.FC = () => {
       return storedProductId || '';
     }
     
-    // Your order ID format: order_68d619d6bd3018ab84b017f0_1759727967656
     const parts = orderId.split('_');
-    return parts[1] || ''; // Returns product ID
+    return parts[1] || '';
   };
 
   const getStoredQuantity = (): number => {
@@ -158,11 +221,18 @@ const PaymentSuccess: React.FC = () => {
     return storedQuantity ? parseInt(storedQuantity) : 1;
   };
 
+  // Helper function to get stored shipping address
+  const getStoredShippingAddress = (): any => {
+    const storedAddress = localStorage.getItem('shipping_address');
+    return storedAddress ? JSON.parse(storedAddress) : {};
+  };
+
   // Clean up localStorage
   useEffect(() => {
     return () => {
       localStorage.removeItem('purchase_quantity');
       localStorage.removeItem('purchase_product_id');
+      localStorage.removeItem('shipping_address');
     };
   }, []);
 
@@ -183,8 +253,16 @@ const PaymentSuccess: React.FC = () => {
           <h2 className="text-xl font-bold mb-2">Payment Processing Issue</h2>
           <p>{error}</p>
           <p className="mt-2 text-sm">
-            Your payment was received but we encountered an issue confirming it. 
-            Please contact support with transaction ID.
+            {error.includes('login') ? (
+              <button 
+                onClick={() => navigate('/login')}
+                className="text-blue-600 underline"
+              >
+                Click here to login and complete your order
+              </button>
+            ) : (
+              'Your payment was received but we encountered an issue confirming it. Please contact support with transaction ID.'
+            )}
           </p>
         </div>
         <button 
@@ -211,7 +289,24 @@ const PaymentSuccess: React.FC = () => {
             <p><strong>Product:</strong> {orderData.product.name}</p>
             <p><strong>Quantity:</strong> {orderData.quantity}</p>
             <p><strong>Total Amount:</strong> Rs. {orderData.totalAmount.toFixed(2)}</p>
-            <p><strong>Status:</strong> {orderData.status}</p>
+            <p><strong>Status:</strong> {OrderStatusDisplay[orderData.status as keyof typeof OrderStatusDisplay] || orderData.status}</p>
+            <p><strong>Payment Status:</strong> {orderData.paymentStatus === 'completed' ? 'Paid' : 'Refunded'}</p>
+            
+            {/* Shipping Address Section */}
+            <div className="mt-4 pt-4 border-t border-gray-200">
+              <h4 className="font-semibold mb-2">Shipping Address:</h4>
+              <p>{orderData.shippingAddress.fullName}</p>
+              <p>{orderData.shippingAddress.street}</p>
+              <p>{orderData.shippingAddress.city}, {orderData.shippingAddress.state} {orderData.shippingAddress.zipCode}</p>
+              <p>{orderData.shippingAddress.country}</p>
+              <p>Phone: {orderData.shippingAddress.phone}</p>
+            </div>
+          </div>
+        )}
+        
+        {!orderData && (
+          <div className="mt-4 text-sm text-green-600">
+            <p>Your payment was successful! Redirecting to orders...</p>
           </div>
         )}
       </div>

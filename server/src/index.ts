@@ -10,6 +10,7 @@ import productRoutes from './routes/productRoutes';
 import paymentRoutes from './routes/paymentRoutes';
 import orderRoutes from './routes/orderRoutes'; 
 import cartRoutes from './routes/cartRoutes'; // Import cart routes
+import adminOrderRoutes from './routes/adminOrderRoutes';
 
 // Load environment variables
 dotenv.config();
@@ -31,6 +32,7 @@ app.use('/api/categories', categoryRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api', orderRoutes);
+app.use('/api/admin', adminOrderRoutes);
 
 app.use('/api/cart', cartRoutes); // Use cart routes
 

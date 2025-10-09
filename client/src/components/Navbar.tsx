@@ -1,5 +1,5 @@
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { getUserRole, isLoggedIn, logout } from '../utils/auth';
 import { useCart } from '../context/CartContext';
 
@@ -11,6 +11,9 @@ export default function Navbar() {
   const navigate = useNavigate();
   const location = useLocation();
   const { cart, removeFromCart, updateQuantity } = useCart();
+  
+  // Add ref for cart dropdown
+  const cartDropdownRef = useRef<HTMLDivElement>(null);
 
   // Update auth state when location changes
   useEffect(() => {
@@ -55,17 +58,17 @@ export default function Navbar() {
     }
   };
 
-  // Close cart dropdown when clicking outside
+  // Close cart dropdown when clicking outside - FIXED VERSION
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (isCartOpen) {
+      if (cartDropdownRef.current && !cartDropdownRef.current.contains(event.target as Node)) {
         setIsCartOpen(false);
       }
     };
 
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [isCartOpen]);
+  }, []);
 
   // Get first 3 items for preview
   const previewItems = cart.items.slice(0, 3);
@@ -125,8 +128,8 @@ export default function Navbar() {
               </div>
             ) : (
               <div className="flex items-center space-x-4">
-                {/* Shopping Cart Dropdown */}
-                <div className="relative">
+                {/* Shopping Cart Dropdown - FIXED */}
+                <div className="relative" ref={cartDropdownRef}>
                   <button
                     onClick={toggleCartDropdown}
                     className="relative p-2 text-gray-700 hover:text-blue-600 transition duration-200"
@@ -175,20 +178,14 @@ export default function Navbar() {
                                     alt={item.name}
                                     className="w-12 h-12 object-cover rounded"
                                   />
-                                  <div
-                                    className="flex-1 min-w-0"
-                                    onClick={(e) => e.stopPropagation()} // Prevent navigation when clicking on controls
-                                  >
+                                  <div className="flex-1 min-w-0">
                                     <p className="font-medium text-sm truncate group-hover:text-blue-600">{item.name}</p>
                                     <p className="text-gray-600 text-sm">${item.price} × {item.quantity}</p>
                                     <p className="text-green-600 font-semibold text-sm">
                                       ${(item.price * item.quantity).toFixed(2)}
                                     </p>
                                   </div>
-                                  <div
-                                    className="flex items-center space-x-1"
-                                    onClick={(e) => e.stopPropagation()} // Prevent navigation when clicking on controls
-                                  >
+                                  <div className="flex items-center space-x-1">
                                     <button
                                       onClick={(e) => handleQuantityChange(item.product, item.quantity - 1, e)}
                                       className="w-6 h-6 bg-gray-200 rounded text-xs flex items-center justify-center hover:bg-gray-300"
@@ -230,7 +227,12 @@ export default function Navbar() {
                                 <span className="font-semibold">Total:</span>
                                 <span className="font-bold text-lg">${cart.total.toFixed(2)}</span>
                               </div>
-
+                              <button
+                                onClick={handleViewCart}
+                                className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition duration-200 font-medium"
+                              >
+                                View Cart & Checkout
+                              </button>
                             </div>
                           </>
                         )}
@@ -351,7 +353,8 @@ export default function Navbar() {
                     onClick={handleViewCart}
                     className="font-medium text-gray-700 hover:text-blue-600 transition duration-200 py-2 flex items-center justify-between text-left w-full"
                   >
-                    <span>Shopping Cart</span>
+                    <span>Shopping Cart ({cart.itemCount} items)</span>
+                    <span className="font-semibold">${cart.total.toFixed(2)}</span>
                   </button>
 
                   {role === 'admin' && (

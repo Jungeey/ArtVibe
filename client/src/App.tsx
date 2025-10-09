@@ -13,14 +13,15 @@ import AdminCategoryPage from "./components/AdminCategoryPage";
 import VendorDashboard from "./pages/VendorDashboard";
 import AdminDashboard from "./pages/AdminDashboard";
 import { isLoggedIn, getUserRole } from "./utils/auth";
-import HomePage from "./pages/ProductPage";
+import ProductPage from "./pages/ProductPage";
 import PurchasePage from "./pages/PurchasePage";
 import ProductDetailPage from "./components/ProductDetailPage";
 import OrderSuccessPage from "./pages/OrderSuccessPage";
 import PaymentSuccess from "./pages/PaymentSuccess";
 import { CartProvider } from './context/CartContext';
 import CartPage from './pages/CartPage';
-
+import HomePage from "./pages/HomePage";
+import OrdersPage from "./pages/OrdersPage";
 
 // Optional future vendor pages (import later if needed)
 // import VendorProductEdit from "./pages/VendorProductEdit";
@@ -48,83 +49,71 @@ const ProtectedRoute = ({ children, requiredRole }: ProtectedRouteProps) => {
 function App() {
   return (
     <CartProvider>
-    <Router>
-      <div className="min-h-screen bg-gray-100">
-        <Navbar />
-        <div className="p-6">
-          <Routes>
-            {/* Home */}
-          <Route path="/products" element={<HomePage />} />
+      <Router>
+        <div className="min-h-screen bg-gray-100 flex flex-col">
+          <Navbar />
+          <main className="flex-1">
+            <Routes>
+              {/* Home */}
+              <Route path="/" element={<HomePage />} />
+              <Route path="/products" element={<ProductPage />} />
+              <Route path="/product/:id" element={<ProductDetailPage />} />
+              <Route path="/purchase/:id" element={<PurchasePage />} />
+              <Route path="/order-success" element={<OrderSuccessPage />} />
+              <Route path="/orders" element={<OrdersPage />} />
+              <Route path="/cart" element={<CartPage />} />
 
-            <Route path="/product/:id" element={<ProductDetailPage />} />
-            <Route path="/purchase/:id" element={<PurchasePage />} />
-            <Route path="/order-success" element={<OrderSuccessPage />} />
+              {/* Auth */}
+              <Route path="/register" element={<Register />} />
+              <Route path="/login" element={<Login />} />
 
+              {/* User */}
+              <Route 
+                path="/user-dashboard" 
+                element={
+                  <ProtectedRoute>
+                    <UserDashboard />
+                  </ProtectedRoute>
+                } 
+              />
 
-            {/* Auth */}
-            <Route path="/register" element={<Register />} />
-            <Route path="/login" element={<Login />} />
+              {/* Vendor */}
+              <Route
+                path="/vendor-dashboard"
+                element={
+                  <ProtectedRoute requiredRole="vendor">
+                    <VendorDashboard />
+                  </ProtectedRoute>
+                }
+              />
 
-            {/* User */}
-            <Route path="/user-dashboard" element={<UserDashboard />} />
+              {/* Admin */}
+              <Route
+                path="/admin-dashboard"
+                element={
+                  <ProtectedRoute requiredRole="admin">
+                    <AdminDashboard />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/categories"
+                element={
+                  <ProtectedRoute requiredRole="admin">
+                    <AdminCategoryPage />
+                  </ProtectedRoute>
+                }
+              />
 
-            {/* Vendor */}
-            <Route
-              path="/vendor-dashboard"
-              element={
-                <ProtectedRoute requiredRole="vendor">
-                  <VendorDashboard />
-                </ProtectedRoute>
-              }
-            />
+              <Route path="/payment/success" element={<PaymentSuccess />} />
 
-            <Route path="/cart" element={<CartPage />} />
-
-            {/* Vendor future routes (for expansion) */}
-            {/*
-            <Route
-              path="/vendor/products/edit/:id"
-              element={
-                <ProtectedRoute requiredRole="vendor">
-                  <VendorProductEdit />
-                </ProtectedRoute>
-              }
-            />
-            */}
-
-            {/* Admin */}
-            <Route
-              path="/admin-dashboard"
-              element={
-                <ProtectedRoute requiredRole="admin">
-                  <AdminDashboard />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/admin/categories"
-              element={
-                <ProtectedRoute requiredRole="admin">
-                  <AdminCategoryPage />
-                </ProtectedRoute>
-              }
-            />
-
-            <Route path="/cart" element={<ProtectedRoute><UserDashboard /></ProtectedRoute>} />
-
-
-
-
-            <Route path="/payment/success" element={<PaymentSuccess />} />
-
-
-            {/* Catch-all */}
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
+              {/* Catch-all */}
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+          </main>
+          <Footer />
         </div>
-        <Footer />
-      </div>
-    </Router>
+      </Router>
     </CartProvider>
   );
 }
