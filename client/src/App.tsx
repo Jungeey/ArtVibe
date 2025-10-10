@@ -8,7 +8,7 @@ import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import Register from "./pages/Register";
 import Login from "./pages/Login";
-import UserDashboard from "./pages/UserDashboard";
+import UserDashboard from "./pages/ProfilePage";
 import AdminCategoryPage from "./components/AdminCategoryPage";
 import VendorDashboard from "./pages/VendorDashboard";
 import AdminDashboard from "./pages/AdminDashboard";
@@ -22,7 +22,11 @@ import { CartProvider } from './context/CartContext';
 import CartPage from './pages/CartPage';
 import HomePage from "./pages/HomePage";
 import OrdersPage from "./pages/OrdersPage";
-
+import TermsAndConditions from "./pages/TermsAndConditions";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
+import FAQ from "./pages/FAQ";
+import Contact from "./pages/Contact";
+import AboutUs from "./pages/AboutUs";
 // Optional future vendor pages (import later if needed)
 // import VendorProductEdit from "./pages/VendorProductEdit";
 // import VendorOrderPage from "./pages/VendorOrders";
@@ -62,6 +66,11 @@ function App() {
               <Route path="/order-success" element={<OrderSuccessPage />} />
               <Route path="/orders" element={<OrdersPage />} />
               <Route path="/cart" element={<CartPage />} />
+              <Route path="/terms" element={<TermsAndConditions />} />
+              <Route path="/privacy" element={<PrivacyPolicy />} />
+              <Route path="/faqs" element={<FAQ />} />
+              <Route path="/contact" element={<Contact />} />
+              <Route path="/about" element={<AboutUs />} />
 
               {/* Auth */}
               <Route path="/register" element={<Register />} />
@@ -69,7 +78,7 @@ function App() {
 
               {/* User */}
               <Route 
-                path="/user-dashboard" 
+                path="/profile" 
                 element={
                   <ProtectedRoute>
                     <UserDashboard />

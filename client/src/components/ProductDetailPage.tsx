@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { getProductById } from '../services/productService';
 import { useCart } from '../context/CartContext';
 import { toast } from 'react-toastify';
+import { isVendor, isAdmin, isLoggedIn } from '../utils/auth';
 
 // INTERFACES
 interface Category {
@@ -55,17 +56,17 @@ const ProductDetailPage: React.FC = () => {
 
                 console.log('Fetching product with ID:', id);
                 const response = await getProductById(id);
-                
+
                 let productData = response.data;
-                
+
                 if (response.data && response.data.product) {
                     productData = response.data.product;
                 }
-                
+
                 if (Array.isArray(productData)) {
                     productData = productData[0];
                 }
-                
+
                 setProduct(productData);
             } catch (error: any) {
                 console.error('Failed to fetch product:', error);
@@ -94,13 +95,18 @@ const ProductDetailPage: React.FC = () => {
     };
 
     const handlePurchase = () => {
+        if (!isLoggedIn()) {
+            toast.info('Please log in to make a purchase');
+            navigate('/login');
+            return;
+        }
         if (!id) return;
         navigate(`/purchase/${id}`);
     };
 
     const handleAddToCart = async () => {
         if (!product) return;
-        
+
         setAddingToCart(true);
         try {
             await addToCart(product);
@@ -115,7 +121,7 @@ const ProductDetailPage: React.FC = () => {
 
     const handleRemoveFromCart = async () => {
         if (!product) return;
-        
+
         setAddingToCart(true);
         try {
             await removeFromCart(product._id);
@@ -130,7 +136,7 @@ const ProductDetailPage: React.FC = () => {
 
     const handleIncreaseQuantity = async () => {
         if (!product) return;
-        
+
         const currentQuantity = getCartQuantity();
         setAddingToCart(true);
         try {
@@ -146,13 +152,13 @@ const ProductDetailPage: React.FC = () => {
 
     const handleDecreaseQuantity = async () => {
         if (!product) return;
-        
+
         const currentQuantity = getCartQuantity();
         if (currentQuantity <= 1) {
             await handleRemoveFromCart();
             return;
         }
-        
+
         setAddingToCart(true);
         try {
             await updateQuantity(product._id, currentQuantity - 1);
@@ -168,7 +174,7 @@ const ProductDetailPage: React.FC = () => {
     // Image carousel functions
     const nextImage = () => {
         if (!product?.images) return;
-        setSelectedImageIndex((prev) => 
+        setSelectedImageIndex((prev) =>
             prev === product.images.length - 1 ? 0 : prev + 1
         );
         setImageLoading(true);
@@ -176,7 +182,7 @@ const ProductDetailPage: React.FC = () => {
 
     const prevImage = () => {
         if (!product?.images) return;
-        setSelectedImageIndex((prev) => 
+        setSelectedImageIndex((prev) =>
             prev === 0 ? product.images.length - 1 : prev - 1
         );
         setImageLoading(true);
@@ -277,7 +283,12 @@ const ProductDetailPage: React.FC = () => {
                         Back
                     </button>
                     <span>/</span>
-                    <span>Products</span>
+                    <button
+                        onClick={() => navigate('/products')}
+                        className="hover:text-blue-600 transition duration-200"
+                    >
+                        Products
+                    </button>
                     <span>/</span>
                     <span className="text-gray-900 font-medium">{getProductName()}</span>
                 </nav>
@@ -296,16 +307,15 @@ const ProductDetailPage: React.FC = () => {
                                 <img
                                     src={images[selectedImageIndex]}
                                     alt={getProductName()}
-                                    className={`w-full h-full object-cover transition-opacity duration-300 ${
-                                        imageLoading ? 'opacity-0' : 'opacity-100'
-                                    }`}
+                                    className={`w-full h-full object-cover transition-opacity duration-300 ${imageLoading ? 'opacity-0' : 'opacity-100'
+                                        }`}
                                     onLoad={() => setImageLoading(false)}
                                     onError={(e) => {
                                         (e.target as HTMLImageElement).src = '/placeholder-image.jpg';
                                         setImageLoading(false);
                                     }}
                                 />
-                                
+
                                 {/* Navigation Arrows */}
                                 {images.length > 1 && (
                                     <>
@@ -327,7 +337,7 @@ const ProductDetailPage: React.FC = () => {
                                         </button>
                                     </>
                                 )}
-                                
+
                                 {/* Image Counter */}
                                 {images.length > 1 && (
                                     <div className="absolute top-4 right-4 bg-black/50 text-white px-2 py-1 rounded-full text-sm">
@@ -343,11 +353,10 @@ const ProductDetailPage: React.FC = () => {
                                         <button
                                             key={index}
                                             onClick={() => selectImage(index)}
-                                            className={`flex-shrink-0 w-20 h-20 rounded-lg overflow-hidden border-2 transition-all duration-200 ${
-                                                selectedImageIndex === index 
-                                                    ? 'border-blue-500 ring-2 ring-blue-200' 
+                                            className={`flex-shrink-0 w-20 h-20 rounded-lg overflow-hidden border-2 transition-all duration-200 ${selectedImageIndex === index
+                                                    ? 'border-blue-500 ring-2 ring-blue-200'
                                                     : 'border-gray-200 hover:border-gray-300'
-                                            }`}
+                                                }`}
                                         >
                                             <img
                                                 src={image}
@@ -393,14 +402,12 @@ const ProductDetailPage: React.FC = () => {
                             </div>
 
                             {/* Stock Status */}
-                            <div className={`inline-flex items-center px-4 py-2 rounded-full text-sm font-medium ${
-                                isOutOfStock() 
-                                    ? 'bg-red-100 text-red-800' 
+                            <div className={`inline-flex items-center px-4 py-2 rounded-full text-sm font-medium ${isOutOfStock()
+                                    ? 'bg-red-100 text-red-800'
                                     : 'bg-green-100 text-green-800'
-                            }`}>
-                                <div className={`w-2 h-2 rounded-full mr-2 ${
-                                    isOutOfStock() ? 'bg-red-500' : 'bg-green-500'
-                                }`}></div>
+                                }`}>
+                                <div className={`w-2 h-2 rounded-full mr-2 ${isOutOfStock() ? 'bg-red-500' : 'bg-green-500'
+                                    }`}></div>
                                 {isOutOfStock() ? 'Out of stock' : `${getStockQuantity()} in stock`}
                             </div>
 
@@ -432,83 +439,86 @@ const ProductDetailPage: React.FC = () => {
                             )}
 
                             {/* Action Buttons */}
-                            <div className="space-y-4">
-                                {/* Buy Now Button */}
-                                <button
-                                    onClick={handlePurchase}
-                                    disabled={isOutOfStock() || addingToCart}
-                                    className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white py-4 rounded-xl font-semibold text-lg shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200 disabled:from-gray-400 disabled:to-gray-500 disabled:transform-none disabled:cursor-not-allowed"
-                                >
-                                    {isOutOfStock() ? 'Out of Stock' : 'Buy Now'}
-                                </button>
-
-                                {/* Cart Controls */}
-                                {!isInCart() ? (
+                            {/* If vendor or admin, hide purchase options */}
+                            {!isVendor() && !isAdmin() && (
+                                <div className="space-y-4">
+                                    {/* Buy Now Button */}
                                     <button
-                                        onClick={handleAddToCart}
+                                        onClick={handlePurchase}
                                         disabled={isOutOfStock() || addingToCart}
-                                        className="w-full border-2 border-gray-300 hover:border-blue-500 text-gray-700 hover:text-blue-700 py-4 rounded-xl font-semibold text-lg transition-all duration-200 disabled:border-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
+                                        className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white py-4 rounded-xl font-semibold text-lg shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200 disabled:from-gray-400 disabled:to-gray-500 disabled:transform-none disabled:cursor-not-allowed"
                                     >
-                                        {addingToCart ? (
-                                            <>
-                                                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
-                                                <span>Adding...</span>
-                                            </>
-                                        ) : (
-                                            <>
-                                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                                                </svg>
-                                                <span>Add to Cart</span>
-                                            </>
-                                        )}
+                                        {isOutOfStock() ? 'Out of Stock' : 'Buy Now'}
                                     </button>
-                                ) : (
-                                    <>
-                                        <div className="flex items-center space-x-3">
-                                            <button
-                                                onClick={handleDecreaseQuantity}
-                                                disabled={addingToCart}
-                                                className="flex-1 bg-red-500 hover:bg-red-600 text-white py-4 rounded-xl font-semibold text-lg shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200 disabled:bg-red-300 disabled:transform-none flex items-center justify-center"
-                                            >
-                                                {addingToCart ? (
-                                                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                                                ) : (
-                                                    '-'
-                                                )}
-                                            </button>
-                                            
-                                            <div className="flex-1 text-center py-4 bg-gray-100 rounded-xl font-semibold text-lg">
-                                                {addingToCart ? (
-                                                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600 mx-auto"></div>
-                                                ) : (
-                                                    `${cartQuantity} in Cart`
-                                                )}
-                                            </div>
-                                            
-                                            <button
-                                                onClick={handleIncreaseQuantity}
-                                                disabled={isOutOfStock() || addingToCart || cartQuantity >= getStockQuantity()}
-                                                className="flex-1 bg-green-500 hover:bg-green-600 text-white py-4 rounded-xl font-semibold text-lg shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200 disabled:bg-green-300 disabled:transform-none flex items-center justify-center"
-                                            >
-                                                {addingToCart ? (
-                                                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                                                ) : (
-                                                    '+'
-                                                )}
-                                            </button>
-                                        </div>
-                                        
+
+                                    {/* Cart Controls */}
+                                    {!isInCart() ? (
                                         <button
-                                            onClick={handleRemoveFromCart}
-                                            disabled={addingToCart}
-                                            className="w-full text-red-600 border-2 border-red-300 hover:border-red-500 hover:bg-red-50 py-3 rounded-xl font-medium transition-all duration-200 disabled:border-gray-200 disabled:text-gray-400"
+                                            onClick={handleAddToCart}
+                                            disabled={isOutOfStock() || addingToCart}
+                                            className="w-full border-2 border-gray-300 hover:border-blue-500 text-gray-700 hover:text-blue-700 py-4 rounded-xl font-semibold text-lg transition-all duration-200 disabled:border-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
                                         >
-                                            {addingToCart ? 'Removing...' : 'Remove from Cart'}
+                                            {addingToCart ? (
+                                                <>
+                                                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
+                                                    <span>Adding...</span>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                                                    </svg>
+                                                    <span>Add to Cart</span>
+                                                </>
+                                            )}
                                         </button>
-                                    </>
-                                )}
-                            </div>
+                                    ) : (
+                                        <>
+                                            <div className="flex items-center space-x-3">
+                                                <button
+                                                    onClick={handleDecreaseQuantity}
+                                                    disabled={addingToCart}
+                                                    className="flex-1 bg-red-500 hover:bg-red-600 text-white py-4 rounded-xl font-semibold text-lg shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200 disabled:bg-red-300 disabled:transform-none flex items-center justify-center"
+                                                >
+                                                    {addingToCart ? (
+                                                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                                                    ) : (
+                                                        '-'
+                                                    )}
+                                                </button>
+
+                                                <div className="flex-1 text-center py-4 bg-gray-100 rounded-xl font-semibold text-lg">
+                                                    {addingToCart ? (
+                                                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600 mx-auto"></div>
+                                                    ) : (
+                                                        `${cartQuantity} in Cart`
+                                                    )}
+                                                </div>
+
+                                                <button
+                                                    onClick={handleIncreaseQuantity}
+                                                    disabled={isOutOfStock() || addingToCart || cartQuantity >= getStockQuantity()}
+                                                    className="flex-1 bg-green-500 hover:bg-green-600 text-white py-4 rounded-xl font-semibold text-lg shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200 disabled:bg-green-300 disabled:transform-none flex items-center justify-center"
+                                                >
+                                                    {addingToCart ? (
+                                                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                                                    ) : (
+                                                        '+'
+                                                    )}
+                                                </button>
+                                            </div>
+
+                                            <button
+                                                onClick={handleRemoveFromCart}
+                                                disabled={addingToCart}
+                                                className="w-full text-red-600 border-2 border-red-300 hover:border-red-500 hover:bg-red-50 py-3 rounded-xl font-medium transition-all duration-200 disabled:border-gray-200 disabled:text-gray-400"
+                                            >
+                                                {addingToCart ? 'Removing...' : 'Remove from Cart'}
+                                            </button>
+                                        </>
+                                    )}
+                                </div>
+                            )}
 
                             {/* Additional Info */}
                             <div className="border-t border-gray-200 pt-6">

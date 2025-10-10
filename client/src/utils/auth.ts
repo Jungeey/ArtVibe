@@ -3,6 +3,7 @@ export interface User {
   email: string;
   role: 'admin' | 'vendor' | 'user';
   vendorVerified?: boolean;
+  verificationStatus?: 'pending' | 'approved' | 'suspended';
   name?: string;
 }
 
@@ -36,8 +37,12 @@ export const isUser = (): boolean => getUserRole() === 'user';
 
 export const isVendorVerified = (): boolean => {
   const user = getUser();
-  // Default to true if vendorVerified field doesn't exist (for backward compatibility)
   return user?.role === 'vendor' && (user?.vendorVerified !== false);
+};
+
+export const VendorVerificationStatus = (): string | null => {
+  const user = getUser();
+  return user?.role === 'vendor' ? user?.verificationStatus || null : null;
 };
 
 export const logout = (): void => {
@@ -56,8 +61,6 @@ export const hasCompleteUserData = (): boolean => {
   const user = getUser();
   return !!(user && user._id && user.email && user.role);
 };
-
-// NEW FUNCTIONS ADDED FOR ORDERS PAGE:
 
 // Enhanced auth verification with debugging
 export const verifyAuth = (): { isAuthenticated: boolean; user: User | null; token: string | null } => {

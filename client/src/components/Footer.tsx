@@ -48,18 +48,17 @@ export default function Footer() {
   ];
 
   const customerService = [
-    { name: 'My Account', path: '/account' },
-    // { name: 'Order Tracking', path: '/tracking' },
+    { name: 'My Account', path: '/profile' },
     { name: 'Terms & Conditions', path: '/terms' },
     { name: 'Privacy Policy', path: '/privacy' }
   ];
 
   const categories = [
-    { name: 'Paintings', path: '/category/paintings' },
-    { name: 'Sculptures', path: '/category/sculptures' },
-    { name: 'Photography', path: '/category/photography' },
-    { name: 'Digital Art', path: '/category/digital-art' },
-    { name: 'Handicrafts', path: '/category/handicrafts' }
+    { name: 'Paintings', path: '/products?category=painting' },
+    { name: 'Clay Art', path: '/products?category=clay-art' },
+    { name: 'Handicrafts', path: '/products?category=handicrafts' },
+    { name: 'Home Decor', path: '/products?category=home-decor' },
+    { name: 'Jewelry and Accessories', path: '/products?category=jewelry-accessories' }
   ];
 
   return (
@@ -204,9 +203,6 @@ export default function Footer() {
               </Link>
               <Link to="/privacy" className="hover:text-white transition duration-200">
                 Privacy
-              </Link>
-              <Link to="/cookies" className="hover:text-white transition duration-200">
-                Cookies
               </Link>
             </div>
           </div>

@@ -2,6 +2,7 @@ import React from 'react';
 import { useCart } from '../context/CartContext';
 import { useNavigate } from 'react-router-dom';
 import { Link } from 'react-router-dom';
+import { isVendor, isAdmin } from '../utils/auth';
 
 const CartPage: React.FC = () => {
     const { cart, removeFromCart, updateQuantity, clearCart } = useCart();
@@ -25,6 +26,9 @@ const CartPage: React.FC = () => {
     }
 
     return (
+        // If is vendor or admin navigate to /
+        (isVendor() || isAdmin()) && navigate('/'),
+
         <div className="min-h-screen bg-gray-50 py-8">
             <div className="max-w-4xl mx-auto px-4">
                 <h1 className="text-3xl font-bold text-gray-900 mb-8">Shopping Cart</h1>

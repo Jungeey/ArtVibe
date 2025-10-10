@@ -2,7 +2,7 @@ import mongoose, { Document, Schema } from 'mongoose';
 import bcrypt from 'bcryptjs';
 
 export type UserRole = 'user' | 'vendor' | 'admin';
-export type VerificationStatus = 'pending' | 'approved' | 'rejected' | 'suspended';
+export type VerificationStatus = 'pending' | 'approved' | 'suspended';
 export interface IUser extends Document {
   name: string;
   email: string;
@@ -54,7 +54,7 @@ const userSchema = new Schema<IUser>({
     twitter: String,
   },
   vendorVerified: { type: Boolean, default: false },
-  verificationStatus: { type: String, enum: ['pending','approved','rejected','suspended'], default: 'pending' },
+  verificationStatus: { type: String, enum: ['pending','approved','suspended'], default: 'pending' },
   verificationNotes: String,
   verifiedAt: Date,
   businessDescription: { type: String, maxlength: 500 },

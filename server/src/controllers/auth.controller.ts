@@ -170,22 +170,27 @@ export const login = async (req: Request, res: Response) => {
       } as jwt.SignOptions // Type assertion
     );
 
+    const userResponse = {
+      _id: user._id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      vendorVerified: user.vendorVerified,
+      verificationStatus: user.verificationStatus,
+      phone: user.phone,
+      address: user.address,
+      ...(user.role === "vendor" && {
+        businessName: user.businessName,
+        businessLicense: user.businessLicense
+      })
+    };
+
+    console.log('🔍 BACKEND - Full user response:', userResponse);
+
     res.status(200).json({
       success: true,
       token,
-      user: {
-        _id: user._id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        vendorVerified: user.vendorVerified,
-        phone: user.phone,
-        address: user.address,
-        ...(user.role === "vendor" && {
-          businessName: user.businessName,
-          businessLicense: user.businessLicense
-        })
-      },
+      user: userResponse,
     });
   } catch (err: any) {
     console.error('Login error:', err);
