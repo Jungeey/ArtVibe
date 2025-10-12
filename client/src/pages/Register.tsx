@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link, useSearchParams } from 'react-router-dom'; // Added useSearchParams
+import { Link, useSearchParams } from 'react-router-dom';
 import { AiOutlineEye, AiOutlineEyeInvisible } from 'react-icons/ai';
 import { 
   UserIcon, 
@@ -15,9 +15,97 @@ import api from '../services/api';
 
 type Role = 'user' | 'vendor';
 
+// Move InputField component outside
+const InputField = ({ 
+  name, 
+  placeholder, 
+  type = 'text', 
+  icon: Icon,
+  required = false,
+  value,
+  onChange,
+  disabled
+}: { 
+  name: string; 
+  placeholder: string; 
+  type?: string;
+  icon?: React.ComponentType<any>;
+  required?: boolean;
+  value: string;
+  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  disabled?: boolean;
+}) => (
+  <div className="relative">
+    {Icon && (
+      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+        <Icon className="h-5 w-5 text-gray-400" />
+      </div>
+    )}
+    <input
+      type={type}
+      name={name}
+      placeholder={placeholder}
+      value={value}
+      onChange={onChange}
+      className={`w-full py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-colors duration-200 placeholder-gray-400 ${
+        Icon ? 'pl-10 pr-4' : 'px-4'
+      }`}
+      required={required}
+      disabled={disabled}
+    />
+  </div>
+);
+
+// Move PasswordField component outside
+const PasswordField = ({ 
+  name, 
+  placeholder, 
+  showPassword: show, 
+  onToggle,
+  required = false,
+  value,
+  onChange,
+  disabled
+}: { 
+  name: string; 
+  placeholder: string; 
+  showPassword: boolean; 
+  onToggle: () => void;
+  required?: boolean;
+  value: string;
+  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  disabled?: boolean;
+}) => (
+  <div className="relative">
+    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+      <svg className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+      </svg>
+    </div>
+    <input
+      type={show ? 'text' : 'password'}
+      name={name}
+      placeholder={placeholder}
+      value={value}
+      onChange={onChange}
+      className="w-full py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-colors duration-200 placeholder-gray-400 pl-10 pr-12"
+      required={required}
+      disabled={disabled}
+    />
+    <button
+      type="button"
+      onClick={onToggle}
+      className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 transition-colors duration-200"
+      disabled={disabled}
+    >
+      {show ? <AiOutlineEyeInvisible size={20} /> : <AiOutlineEye size={20} />}
+    </button>
+  </div>
+);
+
 export default function Register() {
-  const [searchParams] = useSearchParams(); // Add this line
-  const roleParam = searchParams.get('role'); // Get the role parameter from URL
+  const [searchParams] = useSearchParams();
+  const roleParam = searchParams.get('role');
 
   const [form, setForm] = useState({
     name: '',
@@ -41,12 +129,11 @@ export default function Register() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  // Add this useEffect to handle URL parameter
   useEffect(() => {
     if (roleParam === 'vendor') {
       setForm(prev => ({ ...prev, role: 'vendor' }));
     }
-  }, [roleParam]); // This will run when the component mounts and when roleParam changes
+  }, [roleParam]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -63,7 +150,6 @@ export default function Register() {
     }
 
     try {
-      // Base payload
       const basePayload = {
         name: form.name,
         email: form.email,
@@ -96,7 +182,6 @@ export default function Register() {
       const res = await api.post('/auth/register', payload);
       localStorage.setItem('token', res.data.token);
       alert('Registration successful!');
-      // Redirect to appropriate dashboard based on role
       window.location.href = form.role === 'vendor' ? '/vendor-dashboard' : '/';
     } catch (err: any) {
       alert(err.response?.data?.message || 'Registration failed. Please try again.');
@@ -104,80 +189,6 @@ export default function Register() {
       setLoading(false);
     }
   };
-
-  const InputField = ({ 
-    name, 
-    placeholder, 
-    type = 'text', 
-    icon: Icon,
-    required = false 
-  }: { 
-    name: string; 
-    placeholder: string; 
-    type?: string;
-    icon?: React.ComponentType<any>;
-    required?: boolean;
-  }) => (
-    <div className="relative">
-      {Icon && (
-        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-          <Icon className="h-5 w-5 text-gray-400" />
-        </div>
-      )}
-      <input
-        type={type}
-        name={name}
-        placeholder={placeholder}
-        value={form[name as keyof typeof form] as string}
-        onChange={handleChange}
-        className={`w-full py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-colors duration-200 placeholder-gray-400 ${
-          Icon ? 'pl-10 pr-4' : 'px-4'
-        }`}
-        required={required}
-        disabled={loading}
-      />
-    </div>
-  );
-
-  const PasswordField = ({ 
-    name, 
-    placeholder, 
-    showPassword: show, 
-    onToggle,
-    required = false 
-  }: { 
-    name: string; 
-    placeholder: string; 
-    showPassword: boolean; 
-    onToggle: () => void;
-    required?: boolean;
-  }) => (
-    <div className="relative">
-      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-        <svg className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-        </svg>
-      </div>
-      <input
-        type={show ? 'text' : 'password'}
-        name={name}
-        placeholder={placeholder}
-        value={form[name as keyof typeof form] as string}
-        onChange={handleChange}
-        className="w-full py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-colors duration-200 placeholder-gray-400 pl-10 pr-12"
-        required={required}
-        disabled={loading}
-      />
-      <button
-        type="button"
-        onClick={onToggle}
-        className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 transition-colors duration-200"
-        disabled={loading}
-      >
-        {show ? <AiOutlineEyeInvisible size={20} /> : <AiOutlineEye size={20} />}
-      </button>
-    </div>
-  );
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-amber-50 via-orange-50 to-amber-100 py-8 px-4 sm:px-6 lg:px-8">
@@ -191,7 +202,6 @@ export default function Register() {
           <p className="mt-2 text-gray-600">
             Join our community of art lovers and creators
           </p>
-          {/* Optional: Show a message when vendor registration link is used */}
           {roleParam === 'vendor' && (
             <div className="mt-4 p-3 bg-amber-100 border border-amber-300 rounded-lg">
               <p className="text-amber-800 font-medium">
@@ -246,6 +256,9 @@ export default function Register() {
                 placeholder="Full Name"
                 icon={UserIcon}
                 required
+                value={form.name}
+                onChange={handleChange}
+                disabled={loading}
               />
               <InputField
                 name="email"
@@ -253,6 +266,9 @@ export default function Register() {
                 type="email"
                 icon={EnvelopeIcon}
                 required
+                value={form.email}
+                onChange={handleChange}
+                disabled={loading}
               />
             </div>
 
@@ -264,6 +280,9 @@ export default function Register() {
                 showPassword={showPassword}
                 onToggle={() => setShowPassword(!showPassword)}
                 required
+                value={form.password}
+                onChange={handleChange}
+                disabled={loading}
               />
               <PasswordField
                 name="confirmPassword"
@@ -271,6 +290,9 @@ export default function Register() {
                 showPassword={showConfirmPassword}
                 onToggle={() => setShowConfirmPassword(!showConfirmPassword)}
                 required
+                value={form.confirmPassword}
+                onChange={handleChange}
+                disabled={loading}
               />
             </div>
 
@@ -280,11 +302,17 @@ export default function Register() {
                 name="phone"
                 placeholder="Phone Number"
                 icon={PhoneIcon}
+                value={form.phone}
+                onChange={handleChange}
+                disabled={loading}
               />
               <InputField
                 name="address"
                 placeholder="Address"
                 icon={MapPinIcon}
+                value={form.address}
+                onChange={handleChange}
+                disabled={loading}
               />
             </div>
 
@@ -299,12 +327,18 @@ export default function Register() {
                     placeholder="Business Name"
                     icon={BuildingStorefrontIcon}
                     required
+                    value={form.businessName}
+                    onChange={handleChange}
+                    disabled={loading}
                   />
                   <InputField
                     name="businessLicense"
                     placeholder="Business License Number"
                     icon={DocumentTextIcon}
                     required
+                    value={form.businessLicense}
+                    onChange={handleChange}
+                    disabled={loading}
                   />
                 </div>
 
@@ -312,6 +346,9 @@ export default function Register() {
                   name="website"
                   placeholder="Website (optional)"
                   icon={GlobeAltIcon}
+                  value={form.website}
+                  onChange={handleChange}
+                  disabled={loading}
                 />
 
                 <div>
@@ -334,16 +371,25 @@ export default function Register() {
                     name="instagram"
                     placeholder="Instagram"
                     icon={HashtagIcon}
+                    value={form.instagram}
+                    onChange={handleChange}
+                    disabled={loading}
                   />
                   <InputField
                     name="facebook"
                     placeholder="Facebook"
                     icon={HashtagIcon}
+                    value={form.facebook}
+                    onChange={handleChange}
+                    disabled={loading}
                   />
                   <InputField
                     name="twitter"
                     placeholder="Twitter"
                     icon={HashtagIcon}
+                    value={form.twitter}
+                    onChange={handleChange}
+                    disabled={loading}
                   />
                 </div>
 
@@ -351,6 +397,9 @@ export default function Register() {
                   name="taxId"
                   placeholder="Tax ID (optional)"
                   icon={DocumentTextIcon}
+                  value={form.taxId}
+                  onChange={handleChange}
+                  disabled={loading}
                 />
               </div>
             )}
