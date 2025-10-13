@@ -88,18 +88,21 @@ const HomePage: React.FC = () => {
         {
             quote: "The Thangka painting I bought is absolutely breathtaking! The craftsmanship is exceptional.",
             author: "Sarah M.",
+            image: "/testimonials/sarah.png",
             role: "Art Collector from USA",
             avatar: "S"
         },
         {
             quote: "Finally found authentic Nepali handicrafts online. The wood carving quality is superb!",
             author: "James L.",
+            image: "/testimonials/james.png",
             role: "Interior Designer from UK",
             avatar: "J"
         },
         {
             quote: "Art Vibe has helped me reach global customers while preserving our traditional crafts.",
             author: "Bina S.",
+            image: "/testimonials/bina.png",
             role: "Master Weaver from Patan",
             avatar: "B"
         }
@@ -322,7 +325,12 @@ const HomePage: React.FC = () => {
                                 <p className="text-gray-700 text-lg mb-6 italic">"{testimonial.quote}"</p>
                                 <div className="flex items-center">
                                     <div className="w-12 h-12 bg-gradient-to-br from-amber-500 to-orange-500 rounded-full flex items-center justify-center text-white font-bold mr-4">
-                                        {testimonial.avatar}
+                                        {/* {testimonial.avatar} */}
+                                        <img 
+                                            src={testimonial.image} 
+                                            alt={testimonial.author} 
+                                            className="w-full h-full object-cover rounded-full"
+                                        />
                                     </div>
                                     <div>
                                         <div className="font-semibold text-gray-900">{testimonial.author}</div>

@@ -412,9 +412,9 @@ const PurchasePage: React.FC = () => {
         <h2 className="text-lg font-semibold mb-4">Payment Method</h2>
         <div className="flex items-center space-x-3 p-3 border border-blue-300 rounded-lg bg-blue-50">
           <img
-            src="https://khalti.com/static/images/khalti-logo.svg"
+            src="https://khaltibyime.khalti.com/wp-content/uploads/2025/07/Logo-for-Blog.png"
             alt="Khalti"
-            className="w-8 h-8"
+            className="w-32 h-auto"
           />
           <span className="font-medium">Khalti Digital Wallet</span>
           <span className="ml-auto text-sm text-gray-500">Recommended</span>

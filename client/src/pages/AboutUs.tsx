@@ -52,19 +52,19 @@ const AboutUs: React.FC = () => {
     {
       name: 'Sulav Adhikari',
       role: 'Head of Operations',
-      image: '/team/sulav.jpg',
+      image: '/team/sulav.png',
       description: 'Ensuring smooth operations and excellent vendor relationships.'
     },
     {
       name: 'Abiral Timalsina',
       role: 'Community Manager',
-      image: '/team/abiral.jpg',
+      image: '/team/abirall.png',
       description: 'Building and nurturing our community of artists and buyers.'
     },
     {
       name: 'Sudip Jung Khatri',
       role: 'Tech Lead',
-      image: '/team/sudip.jpg',
+      image: '/team/sudip.png',
       description: 'Creating the technology that connects artists with the world.'
     }
   ];
@@ -89,7 +89,7 @@ const AboutUs: React.FC = () => {
                 <span className="text-amber-600">Nepali Art</span>
               </h1>
               <p className="text-xl text-gray-600 mb-8 leading-relaxed">
-                Art Vibe is more than a marketplace—it's a movement to preserve and promote 
+                Art Vibe is more than a marketplace, it's a movement to preserve and promote 
                 Nepal's rich artistic heritage. We connect talented Nepali artisans with 
                 art lovers worldwide, creating a sustainable ecosystem for traditional crafts.
               </p>
@@ -105,7 +105,7 @@ const AboutUs: React.FC = () => {
             <div className="relative">
               <div className="bg-white rounded-2xl p-8 shadow-xl border border-gray-100">
                 <img 
-                  src="/about-hero.jpg" 
+                  src="/about-hero.png" 
                   alt="Nepali Artisans at work"
                   className="w-full h-96 object-cover rounded-xl"
                 />
@@ -145,7 +145,7 @@ const AboutUs: React.FC = () => {
             <h2 className="text-4xl font-bold text-gray-900 mb-4">Our Story</h2>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto">
               From a small idea in the heart of Kathmandu to a platform empowering hundreds 
-              of Nepali artisans—this is our journey of passion, perseverance, and purpose.
+              of Nepali artisans, this is our journey of passion, perseverance, and purpose.
             </p>
           </div>
 
@@ -210,7 +210,12 @@ const AboutUs: React.FC = () => {
               <div key={index} className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 text-center hover:shadow-md transition-shadow duration-300">
                 <div className="w-32 h-32 bg-gray-200 rounded-full mx-auto mb-4 overflow-hidden">
                   <div className="w-full h-full bg-amber-200 flex items-center justify-center text-amber-600">
-                    <UsersIcon className="w-12 h-12" />
+                    {/* <UsersIcon className="w-12 h-12" /> */}
+                    <img 
+                      src={member.image} 
+                      alt={member.name} 
+                      className="w-full h-full object-cover"
+                    />
                   </div>
                 </div>
                 <h3 className="text-xl font-bold text-gray-900 mb-2">{member.name}</h3>
