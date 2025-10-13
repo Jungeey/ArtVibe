@@ -1,4 +1,4 @@
-user1@gmail.com hellouser
+user1@gmail.com Iamuser123
 vendor1@gmail.com  hellovendor
 admin@example.com helloadmin
 

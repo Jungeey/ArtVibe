@@ -1,3 +1,4 @@
+// client/src/components/ChangePasswordForm.tsx
 import React, { useState } from 'react';
 import { toast } from 'react-toastify';
 import api from '../services/api';
@@ -103,26 +104,41 @@ const ChangePasswordForm: React.FC<ChangePasswordFormProps> = ({ onSuccess, onCa
     try {
       setLoading(true);
 
-      const response = await api.put('/auth/change-password', {
+      // ✅ FIXED: Use the correct endpoint
+      const response = await api.put('/profile/change-password', {
         currentPassword: formData.currentPassword,
         newPassword: formData.newPassword
       });
 
-      toast.success('Password changed successfully!');
-      
-      // Reset form
-      setFormData({
-        currentPassword: '',
-        newPassword: '',
-        confirmPassword: ''
-      });
+      console.log('Password change response:', response.data);
 
-      if (onSuccess) {
-        onSuccess();
+      if (response.data && response.data.success) {
+        toast.success(response.data.message || 'Password changed successfully!');
+        
+        // Reset form
+        setFormData({
+          currentPassword: '',
+          newPassword: '',
+          confirmPassword: ''
+        });
+
+        if (onSuccess) {
+          onSuccess();
+        }
+      } else {
+        toast.error(response.data?.error || 'Failed to change password');
       }
     } catch (error: any) {
       console.error('Failed to change password:', error);
-      const errorMessage = error.response?.data?.error || error.response?.data?.message || 'Failed to change password';
+      console.error('Error details:', {
+        status: error.response?.status,
+        data: error.response?.data,
+        message: error.message
+      });
+      
+      const errorMessage = error.response?.data?.error || 
+                          error.response?.data?.message || 
+                          'Failed to change password';
       toast.error(errorMessage);
     } finally {
       setLoading(false);

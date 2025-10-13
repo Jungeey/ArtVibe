@@ -12,6 +12,7 @@ import orderRoutes from './routes/orderRoutes';
 import cartRoutes from './routes/cartRoutes'; // Import cart routes
 import adminOrderRoutes from './routes/adminOrderRoutes';
 import vendorOrderRoutes from './routes/vendorOrderRoutes';
+import profileRoutes from './routes/profileRoutes';
 
 // Load environment variables
 dotenv.config();
@@ -36,6 +37,7 @@ app.use('/api', orderRoutes);
 app.use('/api/admin', adminOrderRoutes);
 app.use('/api/vendor', vendorOrderRoutes);
 app.use('/api/cart', cartRoutes); // Use cart routes
+app.use('/api/profile', profileRoutes); // Use profile routes
 
 // Connect to database
 connectDB();
