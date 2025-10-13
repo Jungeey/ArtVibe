@@ -1,12 +1,14 @@
+// client/src/pages/ProfilePage.tsx
 import React, { useState, useEffect } from 'react';
 import UserProfileForm from '../components/UserProfileForm';
 import ChangePasswordForm from '../components/ChangePasswordForm';
 import { getUser, isUser, VendorVerificationStatus } from '../utils/auth';
 import type { User } from '../utils/auth'; 
 import { toast } from 'react-toastify';
-import { getUserOrders, OrderService } from '../services/orderService';
+import { getUserOrders } from '../services/orderService';
+import api from '../services/api';
 
-// Define Order interfaces locally since they're not exported from orderService
+// Define Order interfaces
 interface OrderProduct {
   _id: string;
   name: string;
@@ -65,7 +67,7 @@ interface AppUser extends User {
   businessName?: string;
 }
 
-// Analytics interfaces
+// Enhanced Analytics interfaces
 interface OrderAnalytics {
   totalOrders: number;
   totalRevenue: number;
@@ -80,6 +82,18 @@ interface OrderAnalytics {
   weeklyRevenue: number;
   todayRevenue: number;
   todayOrders: number;
+  topProducts: Array<{ product: OrderProduct; count: number; revenue: number }>;
+  customerStats: {
+    totalCustomers: number;
+    repeatCustomers: number;
+    newCustomers: number;
+  };
+  timelineData: Array<{ date: string; orders: number; revenue: number }>;
+  performanceMetrics: {
+    conversionRate: number;
+    refundRate: number;
+    averageProcessingTime: number;
+  };
 }
 
 // Filter types
@@ -99,6 +113,49 @@ interface OrderFilters {
   sortOrder: 'asc' | 'desc';
 }
 
+// Status helper functions
+const getStatusIcon = (status: string) => {
+  const icons: { [key: string]: string } = {
+    confirmed: '✅',
+    processing: '🔄',
+    ready_to_ship: '📦',
+    shipped: '🚚',
+    out_for_delivery: '🏍️',
+    delivered: '🎉',
+    cancelled: '❌',
+    refunded: '💸',
+    failed: '⚠️'
+  };
+  return icons[status] || '📋';
+};
+
+const getStatusDisplay = (status: string) => {
+  return status.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+};
+
+const getStatusColor = (status: string) => {
+  const colors: { [key: string]: string } = {
+    confirmed: 'bg-blue-100 text-blue-800',
+    processing: 'bg-yellow-100 text-yellow-800',
+    ready_to_ship: 'bg-purple-100 text-purple-800',
+    shipped: 'bg-indigo-100 text-indigo-800',
+    out_for_delivery: 'bg-orange-100 text-orange-800',
+    delivered: 'bg-green-100 text-green-800',
+    cancelled: 'bg-red-100 text-red-800',
+    refunded: 'bg-gray-100 text-gray-800',
+    failed: 'bg-red-100 text-red-800',
+  };
+  return colors[status] || 'bg-gray-100 text-gray-800';
+};
+
+// Format currency
+const formatCurrency = (amount: number) => {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD'
+  }).format(amount);
+};
+
 const ProfilePage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'profile' | 'password' | 'orders'>('profile');
   const [orders, setOrders] = useState<Order[]>([]);
@@ -108,6 +165,8 @@ const ProfilePage: React.FC = () => {
   const [showFilters, setShowFilters] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [showOrderModal, setShowOrderModal] = useState(false);
+  const [timeRange, setTimeRange] = useState<'7days' | '30days' | '90days' | 'all'>('30days');
+  const [exportLoading, setExportLoading] = useState(false);
   
   // Enhanced filters
   const [filters, setFilters] = useState<OrderFilters>({
@@ -154,35 +213,133 @@ const ProfilePage: React.FC = () => {
     { value: 'refunded', label: 'Refunded' }
   ];
 
+  // Time range options
+  const timeRangeOptions = [
+    { value: '7days', label: 'Last 7 Days' },
+    { value: '30days', label: 'Last 30 Days' },
+    { value: '90days', label: 'Last 90 Days' },
+    { value: 'all', label: 'All Time' }
+  ];
+
   // Fetch orders and analytics
   useEffect(() => {
     if (activeTab === 'orders' && (isVendor || isAdmin)) {
       fetchOrdersAndAnalytics();
     }
-  }, [activeTab]);
+  }, [activeTab, timeRange]);
 
   // Apply filters when filters change
   useEffect(() => {
     applyFilters();
   }, [filters, orders]);
 
-  const fetchOrdersAndAnalytics = async () => {
-    setIsLoading(true);
-    try {
-      const response = await getUserOrders({
-        limit: 100, // Get more orders for better analytics
-        page: 1
+// Replace the fetchOrdersAndAnalytics function with this updated version:
+
+const fetchOrdersAndAnalytics = async () => {
+  setIsLoading(true);
+  
+  try {
+    let response;
+    let ordersData: Order[] = [];
+
+    if (isAdmin) {
+      // Use admin endpoint for admin users
+      const token = localStorage.getItem('token');
+      response = await api.get('/admin/orders', {
+        params: { limit: 1000, page: 1 },
+        headers: { Authorization: `Bearer ${token}` }
       });
+      if (response.data && Array.isArray(response.data.orders)) {
+        ordersData = response.data.orders;
+      }
+    } else if (isVendor) {
+      // For vendors, we need to use a different approach since they can't access admin endpoints
+      console.log('🏪 Vendor detected - trying different approaches...');
       
-      setOrders(response.orders);
-      calculateAnalytics(response.orders);
-    } catch (error: any) {
-      console.error('Error fetching orders:', error);
-      toast.error('Failed to load order analytics');
-    } finally {
-      setIsLoading(false);
+      // Approach 1: Try vendor-specific endpoint if it exists
+      try {
+        const token = localStorage.getItem('token');
+        response = await api.get('/vendor/orders', {
+          params: { limit: 1000, page: 1 },
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        console.log('✅ Vendor orders endpoint response:', response.data);
+        
+        if (response.data && Array.isArray(response.data.orders)) {
+          ordersData = response.data.orders;
+        }
+      } catch (vendorError: any) {
+        console.log('❌ Vendor endpoint failed, trying user orders:', vendorError.response?.status);
+        
+        // Approach 2: Use regular user orders and filter by vendor products
+        try {
+          response = await getUserOrders({
+            limit: 1000,
+            page: 1
+          });
+          console.log('✅ User orders response:', response);
+          
+          if (response && Array.isArray(response.orders)) {
+            // Filter orders to only include vendor's products
+            // This assumes the product has a vendor field that matches the current user ID
+            ordersData = response.orders.filter(order => {
+              const isVendorProduct = order.product.vendor === currentUser?._id || 
+                                    order.product.vendor?._id === currentUser?._id;
+              console.log('🔍 Order vendor check:', {
+                orderId: order._id,
+                productVendor: order.product.vendor,
+                currentUserId: currentUser?._id,
+                isVendorProduct
+              });
+              return isVendorProduct;
+            });
+            console.log('📦 Filtered vendor orders:', ordersData.length);
+          }
+        } catch (userError: any) {
+          console.log('❌ User orders also failed:', userError);
+          throw new Error('No accessible orders endpoint found for vendor');
+        }
+      }
     }
-  };
+
+    console.log('📦 Final orders data:', {
+      ordersCount: ordersData?.length || 0,
+      isArray: Array.isArray(ordersData),
+      sample: ordersData?.[0]
+    });
+
+    if (ordersData && Array.isArray(ordersData)) {
+      setOrders(ordersData);
+      calculateEnhancedAnalytics(ordersData);
+    } else {
+      console.warn('⚠️ No valid orders data found');
+      setOrders([]);
+      setAnalytics(null);
+    }
+    
+  } catch (error: any) {
+    console.error('❌ Error fetching orders:', error);
+    console.error('🔍 Error details:', {
+      message: error.message,
+      response: error.response?.data,
+      status: error.response?.status,
+      url: error.config?.url
+    });
+    
+    if (error.response?.status === 403) {
+      toast.error('Access denied. You do not have permission to view these orders.');
+    } else if (error.response?.status === 401) {
+      toast.error('Authentication failed. Please log in again.');
+    } else {
+      toast.error('Failed to load order analytics');
+    }
+    
+    setOrders([]);
+    setAnalytics(null);
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   const applyFilters = () => {
     let filtered = [...orders];
@@ -192,7 +349,8 @@ const ProfilePage: React.FC = () => {
       filtered = filtered.filter(order => 
         order.product.name.toLowerCase().includes(filters.searchTerm.toLowerCase()) ||
         order.customerInfo.name.toLowerCase().includes(filters.searchTerm.toLowerCase()) ||
-        order.pidx.toLowerCase().includes(filters.searchTerm.toLowerCase())
+        order.pidx.toLowerCase().includes(filters.searchTerm.toLowerCase()) ||
+        order.customerInfo.email.toLowerCase().includes(filters.searchTerm.toLowerCase())
       );
     }
 
@@ -254,7 +412,12 @@ const ProfilePage: React.FC = () => {
     setFilteredOrders(filtered);
   };
 
-  const calculateAnalytics = (orders: Order[]) => {
+  const calculateEnhancedAnalytics = (orders: Order[]) => {
+    if (!orders || orders.length === 0) {
+      setAnalytics(null);
+      return;
+    }
+
     const totalOrders = orders.length;
     const totalRevenue = orders
       .filter(order => order.paymentStatus === 'completed')
@@ -286,10 +449,10 @@ const ProfilePage: React.FC = () => {
       return acc;
     }, {});
 
-    // Recent orders (last 5)
+    // Recent orders (last 10)
     const recentOrders = orders
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-      .slice(0, 5);
+      .slice(0, 10);
 
     // Calculate time-based revenues
     const now = new Date();
@@ -311,7 +474,63 @@ const ProfilePage: React.FC = () => {
       .filter(order => new Date(order.createdAt) >= oneMonthAgo && order.paymentStatus === 'completed')
       .reduce((sum, order) => sum + order.totalAmount, 0);
 
-    setAnalytics({
+    // Top products analysis
+    const productMap = new Map();
+    orders.forEach(order => {
+      const productId = order.product._id;
+      if (productMap.has(productId)) {
+        const existing = productMap.get(productId);
+        productMap.set(productId, {
+          product: order.product,
+          count: existing.count + 1,
+          revenue: existing.revenue + (order.paymentStatus === 'completed' ? order.totalAmount : 0)
+        });
+      } else {
+        productMap.set(productId, {
+          product: order.product,
+          count: 1,
+          revenue: order.paymentStatus === 'completed' ? order.totalAmount : 0
+        });
+      }
+    });
+
+    const topProducts = Array.from(productMap.values())
+      .sort((a, b) => b.revenue - a.revenue)
+      .slice(0, 5);
+
+    // Customer analysis
+    const customerMap = new Map();
+    orders.forEach(order => {
+      const customerEmail = order.customerInfo.email;
+      if (customerMap.has(customerEmail)) {
+        customerMap.set(customerEmail, customerMap.get(customerEmail) + 1);
+      } else {
+        customerMap.set(customerEmail, 1);
+      }
+    });
+
+    const totalCustomers = customerMap.size;
+    const repeatCustomers = Array.from(customerMap.values()).filter(count => count > 1).length;
+    const newCustomers = totalCustomers - repeatCustomers;
+
+    // Timeline data for charts
+    const timelineData = generateTimelineData(orders, 30);
+
+    // Performance metrics
+    const conversionRate = totalOrders > 0 ? (completedOrders / totalOrders) * 100 : 0;
+    const refundRate = totalOrders > 0 ? (cancelledOrders / totalOrders) * 100 : 0;
+
+    // Calculate average processing time (simplified)
+    const deliveredOrders = orders.filter(order => order.status === 'delivered');
+    const averageProcessingTime = deliveredOrders.length > 0 
+      ? deliveredOrders.reduce((sum, order) => {
+          const orderDate = new Date(order.createdAt);
+          const deliveredDate = new Date(order.updatedAt);
+          return sum + (deliveredDate.getTime() - orderDate.getTime()) / (1000 * 60 * 60 * 24); // days
+        }, 0) / deliveredOrders.length
+      : 0;
+
+    const analyticsData: OrderAnalytics = {
       totalOrders,
       totalRevenue,
       completedOrders,
@@ -324,12 +543,52 @@ const ProfilePage: React.FC = () => {
       monthlyRevenue,
       weeklyRevenue,
       todayRevenue,
-      todayOrders
-    });
+      todayOrders,
+      topProducts,
+      customerStats: {
+        totalCustomers,
+        repeatCustomers,
+        newCustomers
+      },
+      timelineData,
+      performanceMetrics: {
+        conversionRate,
+        refundRate,
+        averageProcessingTime
+      }
+    };
+
+    setAnalytics(analyticsData);
+  };
+
+  const generateTimelineData = (orders: Order[], days: number) => {
+    const data = [];
+    const now = new Date();
+    
+    for (let i = days - 1; i >= 0; i--) {
+      const date = new Date(now);
+      date.setDate(date.getDate() - i);
+      const dateStr = date.toISOString().split('T')[0];
+      
+      const dayOrders = orders.filter(order => 
+        order.createdAt.split('T')[0] === dateStr
+      );
+      
+      const dayRevenue = dayOrders
+        .filter(order => order.paymentStatus === 'completed')
+        .reduce((sum, order) => sum + order.totalAmount, 0);
+      
+      data.push({
+        date: dateStr,
+        orders: dayOrders.length,
+        revenue: dayRevenue
+      });
+    }
+    
+    return data;
   };
 
   const handleProfileUpdate = (userData: any) => {
-    console.log('Profile updated:', userData);
     toast.success('Profile updated successfully!');
   };
 
@@ -341,15 +600,59 @@ const ProfilePage: React.FC = () => {
     setActiveTab('profile');
   };
 
+  // Export orders to CSV
+  const exportToCSV = async () => {
+    setExportLoading(true);
+    try {
+      const csvHeaders = [
+        'Order ID',
+        'Product',
+        'Customer',
+        'Email',
+        'Quantity',
+        'Total Amount',
+        'Status',
+        'Payment Status',
+        'Order Date'
+      ].join(',');
+
+      const csvData = filteredOrders.map(order => [
+        order.pidx,
+        `"${order.product.name}"`,
+        `"${order.customerInfo.name}"`,
+        order.customerInfo.email,
+        order.quantity,
+        order.totalAmount,
+        order.status,
+        order.paymentStatus,
+        new Date(order.createdAt).toLocaleDateString()
+      ].join(','));
+
+      const csvContent = [csvHeaders, ...csvData].join('\n');
+      
+      const blob = new Blob([csvContent], { type: 'text/csv' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `orders-${new Date().toISOString().split('T')[0]}.csv`;
+      link.click();
+      window.URL.revokeObjectURL(url);
+      
+      toast.success('Orders exported successfully!');
+    } catch (error) {
+      toast.error('Failed to export orders');
+    } finally {
+      setExportLoading(false);
+    }
+  };
+
   // Get verification status for vendors only
   const getVerificationStatus = () => {
-    console.log('Current user:', currentUser);
     if (currentUser?.role !== 'vendor') {
       return null;
     }
     
     const status = VendorVerificationStatus();
-    console.log('Vendor verification status:', status);
     
     switch (status) {
       case 'approved':
@@ -394,6 +697,7 @@ const ProfilePage: React.FC = () => {
       return (
         <div className="flex justify-center items-center py-12">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+          <span className="ml-4 text-gray-600">Loading analytics...</span>
         </div>
       );
     }
@@ -419,13 +723,19 @@ const ProfilePage: React.FC = () => {
               Manage Products
             </button>
           )}
+          <button
+            onClick={fetchOrdersAndAnalytics}
+            className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition duration-200 font-medium ml-4"
+          >
+            Retry Loading
+          </button>
         </div>
       );
     }
 
     return (
       <div className="space-y-6">
-        {/* Enhanced Analytics Header with Filters Toggle */}
+        {/* Enhanced Analytics Header */}
         <div className="bg-white rounded-lg shadow-md p-6">
           <div className="flex items-center justify-between mb-6">
             <div>
@@ -440,6 +750,15 @@ const ProfilePage: React.FC = () => {
               </p>
             </div>
             <div className="flex items-center space-x-3">
+              <select
+                value={timeRange}
+                onChange={(e) => setTimeRange(e.target.value as any)}
+                className="px-4 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              >
+                {timeRangeOptions.map(option => (
+                  <option key={option.value} value={option.value}>{option.label}</option>
+                ))}
+              </select>
               <button
                 onClick={() => setShowFilters(!showFilters)}
                 className="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 transition duration-200 font-medium flex items-center"
@@ -447,9 +766,14 @@ const ProfilePage: React.FC = () => {
                 <span className="mr-2">🔍</span>
                 {showFilters ? 'Hide Filters' : 'Show Filters'}
               </button>
-              <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center">
-                <span className="text-purple-600 text-lg">📊</span>
-              </div>
+              <button
+                onClick={exportToCSV}
+                disabled={exportLoading || filteredOrders.length === 0}
+                className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition duration-200 font-medium flex items-center disabled:opacity-50"
+              >
+                <span className="mr-2">{exportLoading ? '⏳' : '📥'}</span>
+                {exportLoading ? 'Exporting...' : 'Export CSV'}
+              </button>
             </div>
           </div>
 
@@ -457,7 +781,6 @@ const ProfilePage: React.FC = () => {
           {showFilters && (
             <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-6">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-                {/* Search */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Search</label>
                   <input
@@ -469,7 +792,6 @@ const ProfilePage: React.FC = () => {
                   />
                 </div>
 
-                {/* Status Filter */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
                   <select
@@ -485,7 +807,6 @@ const ProfilePage: React.FC = () => {
                   </select>
                 </div>
 
-                {/* Payment Status Filter */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Payment Status</label>
                   <select
@@ -501,7 +822,6 @@ const ProfilePage: React.FC = () => {
                   </select>
                 </div>
 
-                {/* Sort By */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Sort By</label>
                   <select
@@ -517,7 +837,6 @@ const ProfilePage: React.FC = () => {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                {/* Date Range */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
                   <input
@@ -556,9 +875,8 @@ const ProfilePage: React.FC = () => {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {/* Amount Range */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Min Amount (Rs)</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Min Amount ($)</label>
                   <input
                     type="number"
                     placeholder="Min"
@@ -571,7 +889,7 @@ const ProfilePage: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Max Amount (Rs)</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Max Amount ($)</label>
                   <input
                     type="number"
                     placeholder="Max"
@@ -617,8 +935,8 @@ const ProfilePage: React.FC = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-green-600 text-sm font-medium">Total Revenue</p>
-                  <p className="text-2xl font-bold text-green-800">Rs {analytics.totalRevenue.toLocaleString()}</p>
-                  <p className="text-xs text-green-600 mt-1">Rs {analytics.todayRevenue.toLocaleString()} today</p>
+                  <p className="text-2xl font-bold text-green-800">{formatCurrency(analytics.totalRevenue)}</p>
+                  <p className="text-xs text-green-600 mt-1">{formatCurrency(analytics.todayRevenue)} today</p>
                 </div>
                 <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
                   <span className="text-green-600">💰</span>
@@ -632,10 +950,7 @@ const ProfilePage: React.FC = () => {
                   <p className="text-orange-600 text-sm font-medium">Completed</p>
                   <p className="text-2xl font-bold text-orange-800">{analytics.completedOrders}</p>
                   <p className="text-xs text-orange-600 mt-1">
-                    {analytics.totalOrders > 0 
-                      ? ((analytics.completedOrders / analytics.totalOrders) * 100).toFixed(1) 
-                      : '0'
-                    }% success rate
+                    {analytics.performanceMetrics.conversionRate.toFixed(1)}% success rate
                   </p>
                 </div>
                 <div className="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center">
@@ -648,8 +963,8 @@ const ProfilePage: React.FC = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-purple-600 text-sm font-medium">Avg. Order</p>
-                  <p className="text-2xl font-bold text-purple-800">Rs {analytics.averageOrderValue.toFixed(2)}</p>
-                  <p className="text-xs text-purple-600 mt-1">Rs {analytics.weeklyRevenue.toLocaleString()} this week</p>
+                  <p className="text-2xl font-bold text-purple-800">{formatCurrency(analytics.averageOrderValue)}</p>
+                  <p className="text-xs text-purple-600 mt-1">{formatCurrency(analytics.weeklyRevenue)} this week</p>
                 </div>
                 <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center">
                   <span className="text-purple-600">📈</span>
@@ -658,23 +973,93 @@ const ProfilePage: React.FC = () => {
             </div>
           </div>
 
+          {/* Performance Metrics */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+            <div className="bg-white border border-gray-200 rounded-lg p-4">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Performance Metrics</h3>
+              <div className="space-y-3">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-gray-600">Conversion Rate</span>
+                  <span className="text-sm font-bold text-green-600">
+                    {analytics.performanceMetrics.conversionRate.toFixed(1)}%
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-gray-600">Refund Rate</span>
+                  <span className="text-sm font-bold text-red-600">
+                    {analytics.performanceMetrics.refundRate.toFixed(1)}%
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-gray-600">Avg Processing Time</span>
+                  <span className="text-sm font-bold text-blue-600">
+                    {analytics.performanceMetrics.averageProcessingTime.toFixed(1)} days
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Customer Insights */}
+            <div className="bg-white border border-gray-200 rounded-lg p-4">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Customer Insights</h3>
+              <div className="space-y-3">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-gray-600">Total Customers</span>
+                  <span className="text-sm font-bold text-blue-600">{analytics.customerStats.totalCustomers}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-gray-600">Repeat Customers</span>
+                  <span className="text-sm font-bold text-green-600">{analytics.customerStats.repeatCustomers}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-gray-600">Repeat Rate</span>
+                  <span className="text-sm font-bold text-purple-600">
+                    {analytics.customerStats.totalCustomers > 0 
+                      ? ((analytics.customerStats.repeatCustomers / analytics.customerStats.totalCustomers) * 100).toFixed(1)
+                      : '0'
+                    }%
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Top Products */}
+            <div className="bg-white border border-gray-200 rounded-lg p-4">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Top Products</h3>
+              <div className="space-y-3">
+                {analytics.topProducts.slice(0, 3).map((item, index) => (
+                  <div key={item.product._id} className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <span className="text-xs font-bold text-gray-600">{index + 1}</span>
+                      <span className="text-sm font-medium text-gray-700 truncate max-w-[120px]">
+                        {item.product.name}
+                      </span>
+                    </div>
+                    <span className="text-sm font-bold text-green-600">
+                      {formatCurrency(item.revenue)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
           {/* Enhanced Status Breakdown */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Order Status Distribution */}
             <div className="bg-white border border-gray-200 rounded-lg p-4">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Order Status Distribution</h3>
               <div className="space-y-3">
                 {Object.entries(analytics.statusBreakdown).map(([status, count]) => (
                   <div key={status} className="flex items-center justify-between">
                     <div className="flex items-center space-x-2">
-                      <span>{OrderService.getStatusIcon(status)}</span>
+                      <span>{getStatusIcon(status)}</span>
                       <span className="text-sm font-medium text-gray-700">
-                        {OrderService.getStatusDisplay(status)}
+                        {getStatusDisplay(status)}
                       </span>
                     </div>
                     <div className="flex items-center space-x-2">
                       <span className="text-sm font-bold text-gray-900">{count}</span>
-                      <span className={`text-xs px-2 py-1 rounded-full ${OrderService.getStatusColor(status)}`}>
+                      <span className={`text-xs px-2 py-1 rounded-full ${getStatusColor(status)}`}>
                         {((count / analytics.totalOrders) * 100).toFixed(1)}%
                       </span>
                     </div>
@@ -683,11 +1068,9 @@ const ProfilePage: React.FC = () => {
               </div>
             </div>
 
-            {/* Payment Status & Quick Stats */}
             <div className="bg-white border border-gray-200 rounded-lg p-4">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Payment Status & Quick Stats</h3>
               <div className="space-y-3">
-                {/* Payment Status Breakdown */}
                 <div className="mb-4">
                   <h4 className="text-sm font-medium text-gray-700 mb-2">Payment Status</h4>
                   {Object.entries(analytics.paymentStatusBreakdown).map(([status, count]) => (
@@ -704,13 +1087,9 @@ const ProfilePage: React.FC = () => {
                     <span className="text-sm font-bold text-orange-600">{analytics.pendingOrders}</span>
                   </div>
                   <div className="flex justify-between items-center py-1">
-                    <span className="text-sm text-gray-600">Cancelled/Refunded</span>
-                    <span className="text-sm font-bold text-red-600">{analytics.cancelledOrders}</span>
-                  </div>
-                  <div className="flex justify-between items-center py-1">
                     <span className="text-sm text-gray-600">Monthly Revenue</span>
                     <span className="text-sm font-bold text-green-600">
-                      Rs {analytics.monthlyRevenue.toLocaleString()}
+                      {formatCurrency(analytics.monthlyRevenue)}
                     </span>
                   </div>
                   <div className="flex justify-between items-center py-1">
@@ -725,7 +1104,7 @@ const ProfilePage: React.FC = () => {
           </div>
         </div>
 
-        {/* Enhanced Orders Table with Filtering */}
+        {/* Enhanced Orders Table */}
         <div className="bg-white rounded-lg shadow-md p-6">
           <div className="flex items-center justify-between mb-6">
             <div>
@@ -768,7 +1147,7 @@ const ProfilePage: React.FC = () => {
                       <div>
                         <p className="font-medium text-gray-900">{order.product.name}</p>
                         <p className="text-sm text-gray-500">
-                          Order #: {order.pidx} • Qty: {order.quantity} • Rs {order.totalAmount.toLocaleString()}
+                          Order #: {order.pidx} • Qty: {order.quantity} • {formatCurrency(order.totalAmount)}
                         </p>
                         <p className="text-sm text-gray-500">
                           Customer: {order.customerInfo.name} • {new Date(order.createdAt).toLocaleDateString()}
@@ -776,8 +1155,8 @@ const ProfilePage: React.FC = () => {
                       </div>
                     </div>
                     <div className="text-right">
-                      <span className={`text-xs font-medium px-2 py-1 rounded-full ${OrderService.getStatusColor(order.status)}`}>
-                        {OrderService.getStatusDisplay(order.status)}
+                      <span className={`text-xs font-medium px-2 py-1 rounded-full ${getStatusColor(order.status)}`}>
+                        {getStatusDisplay(order.status)}
                       </span>
                       <p className={`text-xs font-medium px-2 py-1 rounded-full mt-1 ${
                         order.paymentStatus === 'completed' 
@@ -820,7 +1199,7 @@ const ProfilePage: React.FC = () => {
                       <p><strong>Order ID:</strong> {selectedOrder.pidx}</p>
                       <p><strong>Product:</strong> {selectedOrder.product.name}</p>
                       <p><strong>Quantity:</strong> {selectedOrder.quantity}</p>
-                      <p><strong>Total Amount:</strong> Rs {selectedOrder.totalAmount.toLocaleString()}</p>
+                      <p><strong>Total Amount:</strong> {formatCurrency(selectedOrder.totalAmount)}</p>
                       <p><strong>Ordered:</strong> {new Date(selectedOrder.createdAt).toLocaleString()}</p>
                     </div>
                   </div>
@@ -946,7 +1325,7 @@ const ProfilePage: React.FC = () => {
                   </div>
                 </div>
                 
-                {/* Vendor-specific status - ONLY FOR VENDORS */}
+                {/* Vendor-specific status */}
                 {isVendor && verificationInfo && (
                   <div className="mt-3 pt-3 border-t border-blue-200">
                     <div className="space-y-2">
@@ -957,7 +1336,6 @@ const ProfilePage: React.FC = () => {
                         </span>
                       </div>
                       
-                      {/* Vendor verification badge */}
                       <div className="flex items-center justify-between">
                         <span className="text-xs text-gray-600">Verified Vendor:</span>
                         <span className={`text-xs font-medium px-2 py-1 rounded-full border ${
@@ -972,7 +1350,7 @@ const ProfilePage: React.FC = () => {
                   </div>
                 )}
 
-                {/* Admin badge - ONLY FOR ADMINS */}
+                {/* Admin badge */}
                 {isAdmin && (
                   <div className="mt-3 pt-3 border-t border-blue-200">
                     <div className="flex items-center justify-between">
@@ -995,7 +1373,7 @@ const ProfilePage: React.FC = () => {
                 </div>
                 <div className="bg-white p-3 rounded-lg border border-gray-200">
                   <div className="text-2xl font-bold text-green-600">
-                    Rs {analytics?.totalRevenue.toLocaleString() || 0}
+                    {formatCurrency(analytics?.totalRevenue || 0)}
                   </div>
                   <div className="text-xs text-gray-500">Revenue</div>
                 </div>

@@ -18,3 +18,41 @@ khalti otp: 987654
   "__v": 0
 }
 
+
+
+🌿 Traditional / Authentic Feel
+
+Nepali Ghar (नेपाली घर) – “The Nepali Home”; gives a warm, authentic vibe.
+
+Saugat (सौगात) – means “gift” or “token of love”; perfect for a souvenir or handicraft store.
+
+Aama Ko Thaal (आमाको थाल) – “Mother’s Plate”; evokes tradition and homeliness.
+
+Thulo Bazaar (ठूलो बजार) – “Big Market”; fun and local.
+
+Haat Bazaar (हाट बजार) – traditional name for weekly village markets.
+
+🧵 Cultural & Handmade Emphasis
+
+Hastakala (हस्तकला) – means “handicraft”; simple and elegant.
+
+Kalpa (कल्प) – from Sanskrit/Nepali meaning “creation” or “art.”
+
+Parampara (परम्परा) – means “tradition” or “heritage.”
+
+Sanskriti (संस्कृति) – means “culture”; gives a refined feel.
+
+Mato (माटो) – means “soil”; symbolizes roots and Nepali essence.
+
+🕉️ Modern + Cultural Blend
+
+Roots Nepal – combines modern English tone with a traditional meaning.
+
+The Heritage Hub – modern yet authentic feel.
+
+Crafted by Nepal – suitable for handmade or export-oriented brand.
+
+Made in the Hills – catchy and geographically linked.
+
+Soul of Nepal – poetic and emotional name.
+
