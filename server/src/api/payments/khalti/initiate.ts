@@ -10,12 +10,12 @@ app.post('/api/payments/khalti/initiate', async (req, res) => {
     const response = await fetch('https://dev.khalti.com/api/v2/epayment/initiate/', {
       method: 'POST',
       headers: {
-        'Authorization': `Key ${process.env.KHALTI_SECRET_KEY}`,
+        'Authorization': `Key 3e149db413474bfaa6e379e15af46275`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(payload),
     });
-
+    console.log('Khalti initiate response status:', response.status);
     const data = await response.json();
     
     if (!response.ok) {
