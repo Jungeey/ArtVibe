@@ -267,9 +267,9 @@ export default function Navbar() {
                                 />
                                 <div className="flex-1 min-w-0">
                                   <p className="font-semibold text-sm truncate group-hover:text-amber-600">{item.name}</p>
-                                  <p className="text-gray-600 text-sm">${item.price} × {item.quantity}</p>
+                                  <p className="text-gray-600 text-sm">NPR. {item.price} × {item.quantity}</p>
                                   <p className="text-green-600 font-bold text-sm">
-                                    ${(item.price * item.quantity).toFixed(2)}
+                                    NPR. {(item.price * item.quantity).toFixed(2)}
                                   </p>
                                 </div>
                                 <div className="flex items-center space-x-2">
@@ -315,7 +315,7 @@ export default function Navbar() {
                           <div className="border-t border-gray-200 pt-4 mt-4">
                             <div className="flex justify-between items-center mb-4">
                               <span className="font-semibold text-gray-900">Total:</span>
-                              <span className="font-bold text-xl text-amber-600">${cart.total.toFixed(2)}</span>
+                              <span className="font-bold text-xl text-amber-600">NPR. {cart.total.toFixed(2)}</span>
                             </div>
                             <button
                               onClick={handleViewCart}
@@ -518,7 +518,7 @@ export default function Navbar() {
                       <span className="bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-medium">
                         {cart.itemCount}
                       </span>
-                      <span className="font-semibold text-amber-600">${cart.total.toFixed(2)}</span>
+                      <span className="font-semibold text-amber-600">NPR. {cart.total.toFixed(2)}</span>
                     </div>
                   )}
                 </button>

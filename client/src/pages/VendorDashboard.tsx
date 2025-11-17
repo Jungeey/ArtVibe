@@ -323,7 +323,7 @@ const VendorDashboard: React.FC = () => {
                     <td className="border px-4 py-2">
                       {product.images && product.images.length > 0 ? (
                         <img
-                          src={product.thumbnails?.[0] || product.images[0]}
+                          src={product.images[0]}
                           alt={product.name}
                           className="w-12 h-12 object-cover rounded"
                         />

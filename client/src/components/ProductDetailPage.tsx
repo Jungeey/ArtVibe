@@ -397,7 +397,7 @@ const ProductDetailPage: React.FC = () => {
                             {/* Price */}
                             <div className="flex items-baseline space-x-2">
                                 <span className="text-4xl font-bold text-green-600">
-                                    ${getProductPrice()}
+                                    NPR. {getProductPrice()}
                                 </span>
                             </div>
 

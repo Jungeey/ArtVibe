@@ -4,6 +4,7 @@ import { getAllProducts } from '../services/productService';
 import { getCategories } from '../services/categoryService';
 import { useCart } from '../context/CartContext';
 import { isLoggedIn, isUser } from '../utils/auth';
+
 import { 
   MagnifyingGlassIcon,
   FunnelIcon,
@@ -13,6 +14,7 @@ import {
   StarIcon,
   ClockIcon
 } from '@heroicons/react/24/outline';
+
 import { 
   ShoppingCartIcon as ShoppingCartSolid,
   HeartIcon as HeartSolid
@@ -56,7 +58,7 @@ const ProductPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
   const [sortBy, setSortBy] = useState<'name' | 'price' | 'newest' | 'popular'>('newest');
-  const [priceRange, setPriceRange] = useState<[number, number]>([0, 1000]);
+  const [priceRange, setPriceRange] = useState<[number, number]>([0, 100000]);
   const [cartAlerts, setCartAlerts] = useState<{ [key: string]: boolean }>({});
   const [viewAlerts, setViewAlerts] = useState<{ [key: string]: boolean }>({});
   const [showFilters, setShowFilters] = useState(false);
@@ -234,7 +236,7 @@ const ProductPage: React.FC = () => {
   const resetFilters = () => {
     setSearchTerm('');
     setSelectedCategory('');
-    setPriceRange([0, 1000]);
+    setPriceRange([0, 100000]);
     setSortBy('newest');
     navigate('/products'); // Reset URL
   };
@@ -361,13 +363,14 @@ const ProductPage: React.FC = () => {
               {/* Price Range */}
               <div className="mb-6">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Price Range: {formatPrice(priceRange[0])} - {formatPrice(priceRange[1])}
+                  Price Range: 
+                  <div>NPR. {priceRange[0]} - NPR. {priceRange[1]}</div>
                 </label>
                 <div className="space-y-2">
                   <input
                     type="range"
                     min="0"
-                    max="1000"
+                    max="100000"
                     step="10"
                     value={priceRange[0]}
                     onChange={(e) => setPriceRange([parseInt(e.target.value), priceRange[1]])}
@@ -376,7 +379,7 @@ const ProductPage: React.FC = () => {
                   <input
                     type="range"
                     min="0"
-                    max="1000"
+                    max="100000"
                     step="10"
                     value={priceRange[1]}
                     onChange={(e) => setPriceRange([priceRange[0], parseInt(e.target.value)])}
@@ -384,8 +387,8 @@ const ProductPage: React.FC = () => {
                   />
                 </div>
                 <div className="flex justify-between text-xs text-gray-500 mt-1">
-                  <span>{formatPrice(0)}</span>
-                  <span>{formatPrice(1000)}</span>
+                  <span>NPR. 0</span>
+                  <span>(NPR. 100000)</span>
                 </div>
               </div>
 
@@ -428,12 +431,12 @@ const ProductPage: React.FC = () => {
                 <div className="text-amber-400 text-6xl mb-4">🎨</div>
                 <h3 className="text-xl font-semibold text-gray-900 mb-2">No products found</h3>
                 <p className="text-gray-600 mb-6">
-                  {searchTerm || selectedCategory || priceRange[0] > 0 || priceRange[1] < 1000
+                  {searchTerm || selectedCategory || priceRange[0] > 0 || priceRange[1] < 100000
                     ? 'Try adjusting your search or filters to find more treasures.'
                     : 'No products available at the moment. Please check back later.'
                   }
                 </p>
-                {(searchTerm || selectedCategory || priceRange[0] > 0 || priceRange[1] < 1000) && (
+                {(searchTerm || selectedCategory || priceRange[0] > 0 || priceRange[1] < 100000) && (
                   <button
                     onClick={resetFilters}
                     className="bg-amber-600 text-white px-6 py-3 rounded-xl hover:bg-amber-700 transition-colors duration-200"
@@ -456,7 +459,7 @@ const ProductPage: React.FC = () => {
                       <div className="relative h-64 bg-gray-100 overflow-hidden">
                         {product.images && product.images.length > 0 ? (
                           <img
-                            src={product.thumbnails?.[0] || product.images[0]}
+                            src={product.images[0]}
                             alt={product.name}
                             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                           />
@@ -545,7 +548,7 @@ const ProductPage: React.FC = () => {
                         <div className="flex justify-between items-center mb-4">
                           <div>
                             <span className="text-2xl font-bold text-gray-900">
-                              {formatPrice(product.price)}
+                              NPR. {product.price.toLocaleString()}
                             </span>
                             <div className="text-sm text-gray-500">
                               {product.stockQuantity > 0 ? `${product.stockQuantity} available` : 'Out of stock'}

@@ -88,7 +88,7 @@ const CartPage: React.FC = () => {
                                                 <h3 className="font-semibold text-gray-900 mb-1 group-hover:text-blue-600 transition-colors duration-200">
                                                     {item.name}
                                                 </h3>
-                                                <p className="text-gray-600 text-sm mb-2">${item.price}</p>
+                                                <p className="text-gray-600 text-sm mb-2">NPR. {item.price}</p>
                                                 <div className="flex items-center space-x-3">
                                                     <div className="flex items-center space-x-2 bg-white rounded-lg p-1">
                                                         <button
@@ -119,7 +119,7 @@ const CartPage: React.FC = () => {
                                                 onClick={(e) => e.stopPropagation()} // Prevent navigation when clicking on price
                                             >
                                                 <p className="text-lg font-semibold text-green-600">
-                                                    ${(item.price * item.quantity).toFixed(2)}
+                                                NPR. {(item.price * item.quantity).toFixed(2)}
                                                 </p>
                                                 <p className="text-xs text-gray-500 mt-1">Click to view product</p>
                                             </div>
@@ -134,7 +134,7 @@ const CartPage: React.FC = () => {
                             <div className="space-y-3 mb-6">
                                 <div className="flex justify-between">
                                     <span className="text-gray-600">Items ({cart.itemCount})</span>
-                                    <span>${cart.total.toFixed(2)}</span>
+                                    <span>NPR. {cart.total.toFixed(2)}</span>
                                 </div>
                                 <div className="flex justify-between">
                                     <span className="text-gray-600">Shipping</span>
@@ -147,7 +147,7 @@ const CartPage: React.FC = () => {
                                 <div className="border-t border-gray-200 pt-3">
                                     <div className="flex justify-between text-lg font-semibold">
                                         <span>Total</span>
-                                        <span>${cart.total.toFixed(2)}</span>
+                                        <span>NPR. {cart.total.toFixed(2)}</span>
                                     </div>
                                 </div>
                             </div>

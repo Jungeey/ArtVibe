@@ -1,7 +1,9 @@
 user1@gmail.com Iamuser123
-vendor1@gmail.com  hellovendor
-admin@example.com helloadmin
 
+vendor1@gmail.com  hellovendor
+nepalighar@example.com hellovendor
+
+admin@example.com helloadmin
 
 Khalti id: 9800000000
 khalti pin: 1111

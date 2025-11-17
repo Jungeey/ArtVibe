@@ -1,13 +1,13 @@
 import axios from 'axios';
 
 const api = axios.create({
-  // baseURL: 'http://localhost:5000/api',
-  baseURL: 'https://artvibe-c59j.onrender.com/api',
+  baseURL: 'http://localhost:5000/api',
+  // baseURL: 'https://artvibe-c59j.onrender.com/api',
   timeout: 10000,
 });
 
-const ImagePath = 'https://artvibe-c59j.onrender.com';
-// const ImagePath = 'http://localhost:5000';
+// const ImagePath = 'https://artvibe-c59j.onrender.com';
+const ImagePath = 'http://localhost:5000';
 export { ImagePath };
 
 // Add token to every request automatically

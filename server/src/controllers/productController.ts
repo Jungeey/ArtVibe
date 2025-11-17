@@ -88,7 +88,7 @@ export const createProduct = async (req: AuthRequest, res: Response) => {
 
         for (const file of files) {
           const filename = path.basename(file.path);
-          const imageUrl = `https://artvibe-c59j.onrender.com/uploads/${filename}`;
+          const imageUrl = `http://localhost:5000/uploads/${filename}`;
           const thumbnailUrl = imageUrl; // Same URL for now
 
           imageUrls.push(imageUrl);
@@ -132,7 +132,7 @@ export const createProduct = async (req: AuthRequest, res: Response) => {
             console.error("❌ Cloudinary upload failed:", uploadError);
             // Fallback to local path
             const filename = path.basename(file.path);
-            const imageUrl = `https://artvibe-c59j.onrender.com/uploads/${filename}`;
+            const imageUrl = `http://localhost:5000/uploads/${filename}`;
             imageUrls.push(imageUrl);
             thumbnailUrls.push(imageUrl); // Same URL as fallback
           }
@@ -338,7 +338,7 @@ export const updateProduct = async (req: AuthRequest, res: Response) => {
           // Fallback to local
           const filename = path.basename(file.path);
           // const imageUrl = `http://localhost:5000/uploads/${filename}`;
-          const imageUrl = `https://artvibe-c59j.onrender.com/uploads/${filename}`;
+          const imageUrl = `http://localhost:5000/uploads/${filename}`;
           newImageUrls.push(imageUrl);
           newThumbnailUrls.push(imageUrl);
         }
