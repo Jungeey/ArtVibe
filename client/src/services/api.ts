@@ -1,11 +1,20 @@
 import axios from 'axios';
+import dotenv from 'dotenv';
+
+dotenv.config();
 
 const api = axios.create({
-  baseURL: 'http://localhost:5000/api',
+  baseURL:
+    process.env.NODE_ENV === 'development'
+      ? 'http://localhost:5000/api'                   // Local
+      : 'https://artvibe-c59j.onrender.com/api',       // Production (Render)
   timeout: 10000,
 });
 
-const ImagePath = 'http://localhost:5000';
+
+const ImagePath = process.env.NODE_ENV === 'development'
+  ? 'http://localhost:5000'
+  : 'https://artvibe-c59j.onrender.com';
 export { ImagePath };
 
 // Add token to every request automatically
