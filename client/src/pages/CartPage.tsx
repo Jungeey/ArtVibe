@@ -140,10 +140,10 @@ const CartPage: React.FC = () => {
                                     <span className="text-gray-600">Shipping</span>
                                     <span className="text-green-600">Free</span>
                                 </div>
-                                <div className="flex justify-between">
+                                {/* <div className="flex justify-between">
                                     <span className="text-gray-600">Tax</span>
                                     <span>Calculated at checkout</span>
-                                </div>
+                                </div> */}
                                 <div className="border-t border-gray-200 pt-3">
                                     <div className="flex justify-between text-lg font-semibold">
                                         <span>Total</span>

@@ -321,7 +321,7 @@ export default function Navbar() {
                               onClick={handleViewCart}
                               className="w-full bg-gradient-to-r from-amber-600 to-orange-600 text-white py-3 rounded-xl hover:from-amber-700 hover:to-orange-700 transition-all duration-200 font-semibold shadow-lg hover:shadow-xl"
                             >
-                              {!loggedIn ? 'Continue to Cart' : 'View Cart & Checkout'}
+                              {!loggedIn ? 'Continue to Cart' : 'View Cart'}
                             </button>
                             
                             {!loggedIn && (
