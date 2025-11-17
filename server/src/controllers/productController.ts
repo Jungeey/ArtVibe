@@ -337,7 +337,8 @@ export const updateProduct = async (req: AuthRequest, res: Response) => {
           console.error("Error uploading new image:", uploadError);
           // Fallback to local
           const filename = path.basename(file.path);
-          const imageUrl = `http://localhost:5000/uploads/${filename}`;
+          // const imageUrl = `http://localhost:5000/uploads/${filename}`;
+          const imageUrl = `https://artvibe-c59j.onrender.com/uploads/${filename}`;
           newImageUrls.push(imageUrl);
           newThumbnailUrls.push(imageUrl);
         }

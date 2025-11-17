@@ -56,3 +56,7 @@ Made in the Hills – catchy and geographically linked.
 
 Soul of Nepal – poetic and emotional name.
 
+
+
+server/src/controllers/productController.ts
+client/src/services/api.ts
